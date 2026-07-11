@@ -1,0 +1,14 @@
+# Ignore platform code in GitHub language statistics
+
+android/** linguist-vendored
+ios/** linguist-vendored
+linux/** linguist-vendored
+macos/** linguist-vendored
+windows/** linguist-vendored
+
+# Ignore generated files
+build/** linguist-generated=true
+.dart_tool/** linguist-generated=true
+
+*.g.dart linguist-generated=true
+*.freezed.dart linguist-generated=true
