@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class VerifyEmailPage extends ConsumerStatefulWidget {
-  const VerifyEmailPage({Key? key}) : super(key: key);
+  const VerifyEmailPage({super.key});
 
   @override
   ConsumerState<VerifyEmailPage> createState() => _VerifyEmailPageState();
