@@ -17,8 +17,15 @@ class AuthRepository {
     required String email,
     required String password,
     required String name,
+    required String username,
   }) async {
     try {
+      final normalizedUsername = username.toLowerCase();
+      final isAvailable = await isUsernameAvailable(normalizedUsername);
+      if (!isAvailable) {
+        throw StateError('This username is already taken.');
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -29,6 +36,7 @@ class AuthRepository {
       final userModel = UserModel(
         uid: user.uid,
         name: name,
+        username: normalizedUsername,
         email: email,
         photoUrl: user.photoURL ?? '',
         about: "Hey there! I'm using Chat App.",
@@ -46,6 +54,16 @@ class AuthRepository {
     } catch (e) {
       throw Exception('Failed to create account: $e');
     }
+  }
+
+  Future<bool> isUsernameAvailable(String username) async {
+    final existingUsers = await _firestore
+        .collection('users')
+        .where('username', isEqualTo: username.toLowerCase())
+        .limit(1)
+        .get();
+
+    return existingUsers.docs.isEmpty;
   }
 
   Future<UserCredential> signIn(String email, String password) async {

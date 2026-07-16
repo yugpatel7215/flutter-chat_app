@@ -1,5 +1,6 @@
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -11,6 +12,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController(text: '@');
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -18,6 +20,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -26,17 +29,28 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Future<void> _register() async {
     final name = _nameController.text.trim();
+    final username = _usernameController.text.trim().toLowerCase();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (name.isEmpty ||
+        username == '@' ||
         email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter all fields')));
+      return;
+    }
+
+    if (username.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username must have at least 3 characters after @'),
+        ),
+      );
       return;
     }
 
@@ -56,7 +70,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     await ref
         .read(authControllerProvider.notifier)
-        .signUp(email: email, password: password, name: name);
+        .signUp(
+          email: email,
+          password: password,
+          name: name,
+          username: username,
+        );
   }
 
   @override
@@ -101,6 +120,37 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     label: const Text('Enter Name'),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _usernameController,
+                  keyboardType: TextInputType.text,
+                  inputFormatters: [
+                    TextInputFormatter.withFunction((oldValue, newValue) {
+                      if (newValue.text.isEmpty) {
+                        return const TextEditingValue(text: '@');
+                      }
+                      return newValue.text.startsWith('@')
+                          ? newValue
+                          : TextEditingValue(
+                              text: '@${newValue.text}',
+                              selection: TextSelection.collapsed(
+                                offset: newValue.text.length + 1,
+                              ),
+                            );
+                    }),
+                  ],
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    label: const Text('Username'),
                     filled: true,
                     fillColor: Colors.white,
                   ),

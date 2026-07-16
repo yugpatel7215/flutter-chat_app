@@ -1,6 +1,7 @@
 class UserModel {
   final String uid;
   final String name;
+  final String username;
   final String email;
   final String photoUrl;
   final String about;
@@ -10,6 +11,7 @@ class UserModel {
   const UserModel({
     required this.uid,
     required this.name,
+    required this.username,
     required this.email,
     required this.photoUrl,
     required this.about,
@@ -21,6 +23,7 @@ class UserModel {
     return {
       'uid': uid,
       'name': name,
+      'username': username,
       'email': email,
       'photoUrl': photoUrl,
       'about': about,
@@ -33,6 +36,7 @@ class UserModel {
     return UserModel(
       uid: map['uid'] ?? '',
       name: map['name'] ?? '',
+      username: map['username'] ?? '',
       email: map['email'] ?? '',
       photoUrl: map['photoUrl'] ?? '',
       about: map['about'] ?? '',

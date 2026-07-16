@@ -18,9 +18,15 @@ class AuthController extends AsyncNotifier<void> {
     required String email,
     required String password,
     required String name,
+    required String username,
   }) async {
     state = await AsyncValue.guard(() async {
-      await _repo.signUp(email: email, password: password, name: name);
+      await _repo.signUp(
+        email: email,
+        password: password,
+        name: name,
+        username: username,
+      );
     });
     await _repo.sendEmailVerification();
   }
