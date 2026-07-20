@@ -1,7 +1,7 @@
 import 'package:chat_app/features/auth/providers/auth_provider.dart';
-import 'package:chat_app/features/auth/screens/home_page.dart';
+import 'package:chat_app/features/chat/screens/home_page.dart';
 import 'package:chat_app/features/auth/screens/login_page.dart';
-import 'package:chat_app/features/auth/screens/verifyEmail_page.dart';
+import 'package:chat_app/features/auth/screens/verifyemail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,14 +14,20 @@ class AuthGate extends ConsumerWidget {
 
     return user.when(
       data: (user) {
+        print("AuthGate: ${user?.email}");
+
         if (user == null) {
-          return LoginPage();
-        }
-        if (!user.emailVerified) {
-          return VerifyEmailPage();
+          print("Login");
+          return const LoginPage();
         }
 
-        return HomePage();
+        if (!user.emailVerified) {
+          print("Verify");
+          return const VerifyEmailPage();
+        }
+
+        print("Home");
+        return const HomePage();
       },
       error: (error, stack) =>
           Scaffold(body: Center(child: Text('Something went wrong: $error'))),

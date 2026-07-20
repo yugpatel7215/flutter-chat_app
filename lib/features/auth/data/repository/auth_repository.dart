@@ -1,6 +1,7 @@
 import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthRepository {
@@ -82,24 +83,20 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
-    try {
-      final user = _auth.currentUser;
+    final user = _auth.currentUser;
 
-      if (user == null) return;
-
-      await _firestore.collection('users').doc(user.uid).update({
-        'isOnline': false,
-        'lastSeen': DateTime.now(),
-      });
-
-      await _auth.signOut();
-    } on FirebaseAuthException {
-      rethrow;
-    } on FirebaseException {
-      rethrow;
-    } catch (e) {
-      throw Exception('Failed to sign out: $e');
+    if (user != null) {
+      try {
+        await _firestore.collection('users').doc(user.uid).update({
+          'isOnline': false,
+          'lastSeen': DateTime.now(),
+        });
+      } catch (e) {
+        debugPrint("Failed to update presence: $e");
+      }
     }
+
+    await _auth.signOut();
   }
 
   Future<void> sendEmailVerification() async {
@@ -139,7 +136,10 @@ class AuthRepository {
 
   User? get currentUser => _auth.currentUser;
 
-  Stream<User?> userChanges() => _auth.userChanges();
+  Stream<User?> userChanges() => _auth.userChanges().map((user) {
+    print("Auth changed: $user");
+    return user;
+  });
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

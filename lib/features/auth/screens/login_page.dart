@@ -29,7 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter all fields')));
-      return; // ⬅️ see Bug 2
+      return;
     }
 
     await ref.read(authControllerProvider.notifier).signIn(email, password);
@@ -103,17 +103,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      'Not Register Yet ? Register',
-                      style: TextStyle(color: Colors.blue, fontSize: 18),
+                      'Not Register Yet ? \n Register',
+                      style: TextStyle(color: Colors.blue, fontSize: 14),
                     ),
                   ),
                 ),
-                const SizedBox(width: 180),
+                const SizedBox(width: 30),
                 InkWell(
                   onTap: authState.isLoading ? null : _signIn,
                   child: Container(
                     height: 40,
-                    width: 200,
+                    width: 100,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       color: authState.isLoading

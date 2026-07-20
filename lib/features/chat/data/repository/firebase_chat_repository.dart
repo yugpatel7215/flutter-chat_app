@@ -6,6 +6,7 @@ import 'package:chat_app/features/chat/data/models/message_model.dart';
 import 'package:chat_app/features/chat/data/repository/chat_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FirebaseChatRepository implements ChatRepository {
   final FirebaseFirestore _firestore;
@@ -197,3 +198,10 @@ class FirebaseChatRepository implements ChatRepository {
     await batch.commit();
   }
 }
+
+final chatRepositoryProvider = Provider((ref) {
+  return FirebaseChatRepository(
+    firestore: FirebaseFirestore.instance,
+    auth: FirebaseAuth.instance,
+  );
+});

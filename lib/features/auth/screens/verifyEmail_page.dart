@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
-import 'package:chat_app/features/auth/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,17 +30,6 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
 
   Future<void> _checkVerified() async {
     await ref.read(authControllerProvider.notifier).reloadCurrentUser();
-
-    final isVerified =
-        ref.read(authControllerProvider.notifier).currentUser?.emailVerified ??
-        false;
-
-    if (isVerified && mounted) {
-      _timer?.cancel();
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
-    }
   }
 
   Future<void> _resendEmail() async {

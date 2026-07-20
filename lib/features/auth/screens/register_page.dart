@@ -76,6 +76,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           name: name,
           username: username,
         );
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override

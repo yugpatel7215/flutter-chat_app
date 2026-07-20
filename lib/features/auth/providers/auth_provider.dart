@@ -1,8 +1,12 @@
-import 'package:chat_app/features/auth/data/repository/auth_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+final _auth = FirebaseAuth.instance;
+
 final authStateProvider = StreamProvider<User?>((ref) {
-  final repo = ref.watch(authRepositoryProvider);
-  return repo.userChanges();
+  return _auth.userChanges().map((user) {
+    // ignore: avoid_print
+    print('Provider emitted: ${user?.email}');
+    return user;
+  });
 });
