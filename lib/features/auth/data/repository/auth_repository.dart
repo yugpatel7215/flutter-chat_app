@@ -13,7 +13,6 @@ class AuthRepository {
     required FirebaseFirestore firestore,
   }) : _auth = auth,
        _firestore = firestore;
-
   Future<UserCredential> signUp({
     required String email,
     required String password,
@@ -45,7 +44,10 @@ class AuthRepository {
         lastSeen: DateTime.now(),
       );
 
-      await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
+      await Future.wait([
+        _firestore.collection('users').doc(user.uid).set(userModel.toMap()),
+        user.sendEmailVerification(),
+      ]);
 
       return credential;
     } on FirebaseAuthException {

@@ -20,15 +20,19 @@ class AuthController extends AsyncNotifier<void> {
     required String name,
     required String username,
   }) async {
-    state = await AsyncValue.guard(() async {
+    state = const AsyncValue.loading();
+    try {
       await _repo.signUp(
         email: email,
         password: password,
         name: name,
         username: username,
       );
-    });
-    await _repo.sendEmailVerification();
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
   }
 
   Future<void> sendEmailVerification() async {

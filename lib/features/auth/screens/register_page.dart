@@ -68,17 +68,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       return;
     }
 
-    await ref
-        .read(authControllerProvider.notifier)
-        .signUp(
-          email: email,
-          password: password,
-          name: name,
-          username: username,
-        );
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    try {
+      await ref
+          .read(authControllerProvider.notifier)
+          .signUp(
+            email: email,
+            password: password,
+            name: name,
+            username: username,
+          );
+
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (_) {}
   }
 
   @override

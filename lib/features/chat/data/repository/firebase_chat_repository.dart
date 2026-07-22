@@ -106,12 +106,17 @@ class FirebaseChatRepository implements ChatRepository {
     if (currentUser == null) return [];
 
     final lowerQuery = query.toLowerCase();
+    final searchTerm = '@$lowerQuery';
+
+    print('Searching for: "$searchTerm" to "$searchTerm\uf8ff"');
 
     final querySnapshot = await _firestore
         .collection('users')
-        .where('username', isGreaterThanOrEqualTo: lowerQuery)
-        .where('username', isLessThanOrEqualTo: '$lowerQuery\uf8ff')
+        .where('username', isGreaterThanOrEqualTo: searchTerm)
+        .where('username', isLessThanOrEqualTo: '$searchTerm\uf8ff')
         .get();
+
+    print('Docs found: ${querySnapshot.docs.length}');
 
     final users = querySnapshot.docs
         .map((doc) => UserModel.fromMap(doc.data()))

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
 import 'package:chat_app/features/chat/providers/chat_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -13,6 +14,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  bool _isSigningOut = false;
   final _searchController = TextEditingController();
   String _query = '';
   Timer? _debounce;
@@ -31,6 +33,19 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  Future<void> _signOut() async {
+    setState(() => _isSigningOut = true);
+
+    await Future.wait([
+      ref.read(authControllerProvider.notifier).signOut(),
+      Future.delayed(const Duration(seconds: 1)),
+    ]);
+
+    if (mounted) {
+      setState(() => _isSigningOut = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatsAsync = ref.watch(getChats);
@@ -40,14 +55,14 @@ class _HomePageState extends ConsumerState<HomePage> {
         title: const Text('Chats'),
         centerTitle: true,
         leading: IconButton(
-          onPressed: () async {
-            print("Logout pressed");
-
-            await ref.read(authControllerProvider.notifier).signOut();
-
-            print("Logout completed");
-          },
-          icon: Icon(Icons.logout_outlined),
+          onPressed: _isSigningOut ? null : _signOut,
+          icon: _isSigningOut
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.logout_outlined),
         ),
       ),
 
@@ -57,6 +72,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             padding: const EdgeInsets.all(12.0),
             child: TextField(
               controller: _searchController,
+              inputFormatters: [FilteringTextInputFormatter.deny(RegExp('@'))],
               decoration: InputDecoration(
                 hintText: 'Search users...',
                 prefixIcon: const Icon(Icons.search),

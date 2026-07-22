@@ -14,19 +14,14 @@ class AuthGate extends ConsumerWidget {
 
     return user.when(
       data: (user) {
-        print("AuthGate: ${user?.email}");
-
         if (user == null) {
-          print("Login");
           return const LoginPage();
         }
 
         if (!user.emailVerified) {
-          print("Verify");
           return const VerifyEmailPage();
         }
 
-        print("Home");
         return const HomePage();
       },
       error: (error, stack) =>
