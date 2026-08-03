@@ -209,9 +209,55 @@ class FirebaseFriendRepository implements FriendRepository {
   }
 
   @override
-  Stream<List<RelationshipModel>> getFriends() {
-    // TODO: implement getFriends
-    throw UnimplementedError();
+  @override
+  Stream<List<UserModel>> getFriends() {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    return _firestore
+        .collection('relationships')
+        .where('participants', arrayContains: currentUser.uid)
+        .where('status', isEqualTo: RelationshipStatus.accepted.name)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => RelationshipModel.fromMap(doc.data()))
+              .toList(),
+        )
+        .asyncMap((relationships) async {
+          if (relationships.isEmpty) {
+            return <UserModel>[];
+          }
+
+          final friendIds = relationships
+              .map(
+                (relationship) => relationship.participants.firstWhere(
+                  (uid) => uid != currentUser.uid,
+                ),
+              )
+              .toSet()
+              .toList();
+
+          final usersSnapshot = await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: friendIds)
+              .get();
+
+          final users = usersSnapshot.docs
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList();
+
+          // Preserve the original relationship order.
+          final userMap = {for (final user in users) user.uid: user};
+
+          return friendIds
+              .map((id) => userMap[id])
+              .whereType<UserModel>()
+              .toList();
+        });
   }
 
   @override
@@ -259,20 +305,121 @@ class FirebaseFriendRepository implements FriendRepository {
   }
 
   @override
-  Stream<List<RelationshipModel>> getIncomingRequests() {
-    // TODO: implement getIncomingRequests
-    throw UnimplementedError();
+  @override
+  Stream<List<UserModel>> getIncomingRequests() {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    return _firestore
+        .collection('relationships')
+        .where('receiverId', isEqualTo: currentUser.uid)
+        .where('status', isEqualTo: RelationshipStatus.pending.name)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => RelationshipModel.fromMap(doc.data()))
+              .toList(),
+        )
+        .asyncMap((relationships) async {
+          if (relationships.isEmpty) {
+            return <UserModel>[];
+          }
+
+          final senderIds = relationships
+              .map((relationship) => relationship.senderId)
+              .toSet()
+              .toList();
+
+          final usersSnapshot = await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: senderIds)
+              .get();
+
+          final users = usersSnapshot.docs
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList();
+
+          // Preserve the same order as the relationship list.
+          final userMap = {for (final user in users) user.uid: user};
+
+          return senderIds
+              .map((id) => userMap[id])
+              .whereType<UserModel>()
+              .toList();
+        });
   }
 
   @override
-  Stream<List<RelationshipModel>> getOutgoingRequests() {
-    // TODO: implement getOutgoingRequests
-    throw UnimplementedError();
+  Stream<List<UserModel>> getOutgoingRequests() {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    return _firestore
+        .collection('relationships')
+        .where('senderId', isEqualTo: currentUser.uid)
+        .where('status', isEqualTo: RelationshipStatus.pending.name)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => RelationshipModel.fromMap(doc.data()))
+              .toList(),
+        )
+        .asyncMap((relationships) async {
+          if (relationships.isEmpty) return <UserModel>[];
+
+          final receiverIds = relationships
+              .map((r) => r.receiverId)
+              .toSet()
+              .toList();
+
+          final usersSnapshot = await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: receiverIds)
+              .get();
+
+          final users = usersSnapshot.docs
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList();
+
+          final userMap = {for (final user in users) user.uid: user};
+
+          return receiverIds
+              .map((id) => userMap[id])
+              .whereType<UserModel>()
+              .toList();
+        });
   }
 
+  @override
   @override
   Stream<RelationshipModel?> getRelationship(String otherUserId) {
-    // TODO: implement getRelationship
-    throw UnimplementedError();
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    final relationshipId = _generateRelationshipId(
+      currentUser.uid,
+      otherUserId,
+    );
+
+    return _firestore
+        .collection('relationships')
+        .doc(relationshipId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists || snapshot.data() == null) {
+            return null;
+          }
+
+          return RelationshipModel.fromMap(snapshot.data()!);
+        });
   }
 }

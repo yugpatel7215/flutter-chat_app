@@ -22,7 +22,7 @@ abstract class FriendRepository {
   Stream<RelationshipModel?> getRelationship(String otherUserId);
 
   // Incoming requests
-  Stream<List<RelationshipModel>> getIncomingRequests();
+  Stream<List<UserModel>> getIncomingRequests();
 
   // Outgoing requests
   Stream<List<RelationshipModel>> getOutgoingRequests();
