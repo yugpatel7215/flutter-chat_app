@@ -4,6 +4,7 @@ import 'package:chat_app/features/friends/data/models/relationship_model.dart';
 import 'package:chat_app/features/friends/data/repository/relationship_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FirebaseFriendRepository implements FriendRepository {
   final FirebaseFirestore _firestore;
@@ -423,3 +424,10 @@ class FirebaseFriendRepository implements FriendRepository {
         });
   }
 }
+
+final relationshipController = Provider<FirebaseFriendRepository>((ref) {
+  return FirebaseFriendRepository(
+    firestore: FirebaseFirestore.instance,
+    auth: FirebaseAuth.instance,
+  );
+});

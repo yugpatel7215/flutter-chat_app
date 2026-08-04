@@ -25,8 +25,8 @@ abstract class FriendRepository {
   Stream<List<UserModel>> getIncomingRequests();
 
   // Outgoing requests
-  Stream<List<RelationshipModel>> getOutgoingRequests();
+  Stream<List<UserModel>> getOutgoingRequests();
 
   // Accepted friends
-  Stream<List<RelationshipModel>> getFriends();
+  Stream<List<UserModel>> getFriends();
 }
