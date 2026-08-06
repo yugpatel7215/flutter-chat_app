@@ -142,6 +142,18 @@ class AuthRepository {
     print("Auth changed: $user");
     return user;
   });
+
+  Stream<UserModel?> getUser(String userId) {
+    return _firestore.collection('users').doc(userId).snapshots().map((
+      snapshot,
+    ) {
+      if (!snapshot.exists) {
+        return null;
+      }
+      final data = snapshot.data();
+      return data != null ? UserModel.fromMap(data) : null;
+    });
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/auth/data/repository/auth_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,6 +72,10 @@ class AuthController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await _repo.relaodCurrentuser();
     });
+  }
+
+  Stream<UserModel?> getUser(String userId) {
+    return _repo.getUser(userId);
   }
 
   User? get currentUser => _repo.currentUser;

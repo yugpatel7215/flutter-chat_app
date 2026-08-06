@@ -45,11 +45,11 @@ class RelationshipController extends AsyncNotifier<void> {
     });
   }
 
-  Future<void> acceptFriendRequest(String senderId) async {
+  Future<void> acceptFriendRequest(RelationshipModel relationship) async {
     state = const AsyncLoading();
 
     state = await AsyncValue.guard(() async {
-      await _repo.acceptFriendRequest(senderId);
+      await _repo.acceptFriendRequest(relationship);
     });
   }
 

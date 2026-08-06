@@ -79,16 +79,20 @@ class FirebaseFriendRepository implements FriendRepository {
   }
 
   @override
-  Future<void> acceptFriendRequest(String relationshipId) async {
+  Future<void> acceptFriendRequest(RelationshipModel relationship) async {
     final currentUser = _auth.currentUser;
 
     if (currentUser == null) {
       throw StateError('No authenticated user.');
     }
+    final relationshId = _generateRelationshipId(
+      currentUser.uid,
+      relationship.senderId,
+    );
 
     final relationshipDoc = _firestore
         .collection('relationships')
-        .doc(relationshipId);
+        .doc(relationshId);
 
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(relationshipDoc);
@@ -425,7 +429,9 @@ class FirebaseFriendRepository implements FriendRepository {
   }
 }
 
-final relationshipController = Provider<FirebaseFriendRepository>((ref) {
+final relationshipRepositoryProvider = Provider<FirebaseFriendRepository>((
+  ref,
+) {
   return FirebaseFriendRepository(
     firestore: FirebaseFirestore.instance,
     auth: FirebaseAuth.instance,
