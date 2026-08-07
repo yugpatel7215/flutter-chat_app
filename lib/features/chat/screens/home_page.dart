@@ -1,7 +1,9 @@
 import 'dart:async';
-
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
 import 'package:chat_app/features/chat/providers/chat_provider.dart';
+import 'package:chat_app/features/friends/presentation/screens/friend_request_page.dart';
+import 'package:chat_app/features/friends/presentation/user_profile_page.dart';
+import 'package:chat_app/features/friends/providers/relationship_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,21 +50,48 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final request = ref.watch(getIncomingRequests);
     final chatsAsync = ref.watch(getChats);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chats'),
-        centerTitle: true,
-        leading: IconButton(
-          onPressed: _isSigningOut ? null : _signOut,
-          icon: _isSigningOut
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.logout_outlined),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            IconButton(
+              onPressed: _isSigningOut ? null : _signOut,
+              icon: _isSigningOut
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.logout_outlined),
+            ),
+            const Expanded(child: Center(child: Text('Chats'))),
+            Consumer(
+              builder: (context, ref, child) {
+                final incomingRequestsAsync = ref.watch(getIncomingRequests);
+                final requestCount = incomingRequestsAsync.value?.length ?? 0;
+
+                return IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FriendRequestPage(),
+                      ),
+                    );
+                  },
+                  icon: Badge(
+                    label: Text('$requestCount'),
+                    isLabelVisible: requestCount > 0,
+                    child: Icon(Icons.notifications, color: Colors.blue[400]),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
 
@@ -130,12 +159,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                             itemCount: users.length,
                             itemBuilder: (context, index) {
                               final user = users[index];
-                              return ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.person),
+                              return InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          UserProfilePage(userModel: user),
+                                    ),
+                                  );
+                                },
+                                child: ListTile(
+                                  leading: const CircleAvatar(
+                                    child: Icon(Icons.person),
+                                  ),
+                                  title: Text(user.username),
                                 ),
-                                title: Text(user.name),
-                                onTap: () {},
                               );
                             },
                           );

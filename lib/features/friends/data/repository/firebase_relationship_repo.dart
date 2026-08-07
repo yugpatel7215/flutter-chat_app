@@ -1,5 +1,6 @@
 import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/friends/data/enum/friendship_enum.dart';
+import 'package:chat_app/features/friends/data/models/friend_request_model.dart';
 import 'package:chat_app/features/friends/data/models/relationship_model.dart';
 import 'package:chat_app/features/friends/data/repository/relationship_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,6 +27,7 @@ class FirebaseFriendRepository implements FriendRepository {
   @override
   Future<void> sendFriendRequest(UserModel receiver) async {
     final currentUser = _auth.currentUser;
+
     if (currentUser == null) {
       return;
     }
@@ -35,45 +37,56 @@ class FirebaseFriendRepository implements FriendRepository {
         currentUser.uid,
         receiver.uid,
       );
-      final doc = _firestore.collection('relationships').doc(relationshipId);
-      final snapshot = await transaction.get(doc);
 
+      final relationshipDoc = _firestore
+          .collection('relationships')
+          .doc(relationshipId);
+
+      final snapshot = await transaction.get(relationshipDoc);
+
+      // First request → create relationship and stop.
       if (!snapshot.exists) {
-        final data = RelationshipModel(
+        final relationship = RelationshipModel(
           participants: [currentUser.uid, receiver.uid],
           senderId: currentUser.uid,
           receiverId: receiver.uid,
           status: RelationshipStatus.pending,
-          updatedAt: DateTime.now(),
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
-        transaction.set(doc, data.toMap());
+
+        transaction.set(relationshipDoc, relationship.toMap());
+
+        return;
       }
+
+      // Relationship already exists.
       final relationship = RelationshipModel.fromMap(snapshot.data()!);
-      final relationshipdoc = _firestore
-          .collection('relationships')
-          .doc(relationshipId);
 
       switch (relationship.status) {
         case RelationshipStatus.pending:
           return;
+
         case RelationshipStatus.accepted:
           return;
 
         case RelationshipStatus.rejected:
-          final currenttime = DateTime.now();
-          final difference = currenttime.difference(relationship.updatedAt);
+          final currentTime = DateTime.now();
           const cooldown = Duration(days: 1);
-          if (difference >= cooldown) {
-            final updatedrelationship = relationship.copyWith(
-              updatedAt: currenttime,
-              status: RelationshipStatus.pending,
+
+          if (currentTime.difference(relationship.updatedAt) >= cooldown) {
+            transaction.update(
+              relationshipDoc,
+              relationship
+                  .copyWith(
+                    status: RelationshipStatus.pending,
+                    updatedAt: currentTime,
+                  )
+                  .toMap(),
             );
-            transaction.set(relationshipdoc, updatedrelationship.toMap());
-          } else {
-            return;
           }
-          break;
+
+          return;
       }
     });
   }
@@ -311,7 +324,7 @@ class FirebaseFriendRepository implements FriendRepository {
 
   @override
   @override
-  Stream<List<UserModel>> getIncomingRequests() {
+  Stream<List<FriendRequestModel>> getIncomingRequests() {
     final currentUser = _auth.currentUser;
 
     if (currentUser == null) {
@@ -330,7 +343,7 @@ class FirebaseFriendRepository implements FriendRepository {
         )
         .asyncMap((relationships) async {
           if (relationships.isEmpty) {
-            return <UserModel>[];
+            return <FriendRequestModel>[];
           }
 
           final senderIds = relationships
@@ -347,12 +360,18 @@ class FirebaseFriendRepository implements FriendRepository {
               .map((doc) => UserModel.fromMap(doc.data()))
               .toList();
 
-          // Preserve the same order as the relationship list.
           final userMap = {for (final user in users) user.uid: user};
 
-          return senderIds
-              .map((id) => userMap[id])
-              .whereType<UserModel>()
+          return relationships
+              .map((relationship) {
+                final sender = userMap[relationship.senderId];
+                if (sender == null) return null;
+                return FriendRequestModel(
+                  relationship: relationship,
+                  user: sender,
+                );
+              })
+              .whereType<FriendRequestModel>()
               .toList();
         });
   }
