@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
 import 'package:chat_app/features/chat/providers/chat_provider.dart';
-import 'package:chat_app/features/chat/screens/chat_page.dart';
+import 'package:chat_app/features/chat/presentation/screens/chat_page.dart';
 import 'package:chat_app/features/friends/presentation/screens/friend_request_page.dart';
 import 'package:chat_app/features/friends/presentation/screens/friends_page.dart';
 import 'package:chat_app/features/friends/presentation/user_profile_page.dart';
@@ -167,7 +167,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ChatPage(),
+                                  builder: (context) =>
+                                      ChatPage(chat: chatdata),
                                 ),
                               );
                             },

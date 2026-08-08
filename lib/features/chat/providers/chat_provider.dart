@@ -1,4 +1,5 @@
 import 'package:chat_app/features/auth/data/models/user_model.dart';
+import 'package:chat_app/features/chat/controllers/chat_controller.dart';
 import 'package:chat_app/features/chat/data/models/chattile_model.dart';
 import 'package:chat_app/features/chat/data/models/message_model.dart';
 import 'package:chat_app/features/chat/data/repository/firebase_chat_repository.dart';
@@ -19,6 +20,10 @@ final getMessege = StreamProvider.family<List<MessageModel>, String>((
   final repo = ref.watch(chatRepositoryProvider);
   return repo.getMessages(chatId);
 });
+
+final chatControllerProvider = AsyncNotifierProvider<ChatController, void>(
+  () => ChatController(),
+);
 
 final getChats = StreamProvider<List<ChatTileModel>>((ref) {
   final repo = ref.watch(chatRepositoryProvider);
