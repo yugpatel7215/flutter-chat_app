@@ -61,4 +61,12 @@ class RelationshipController extends AsyncNotifier<void> {
       await _repo.rejectFriendRequest(relationship);
     });
   }
+
+  Future<void> removeFriend(UserModel friend) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.removeFriend(friend);
+    });
+  }
 }

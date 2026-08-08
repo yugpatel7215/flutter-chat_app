@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
 import 'package:chat_app/features/chat/providers/chat_provider.dart';
+import 'package:chat_app/features/chat/screens/chat_page.dart';
 import 'package:chat_app/features/friends/presentation/screens/friend_request_page.dart';
+import 'package:chat_app/features/friends/presentation/screens/friends_page.dart';
 import 'package:chat_app/features/friends/presentation/user_profile_page.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -50,7 +53,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final request = ref.watch(getIncomingRequests);
     final chatsAsync = ref.watch(getChats);
 
     return Scaffold(
@@ -97,6 +99,26 @@ class _HomePageState extends ConsumerState<HomePage> {
 
       body: Column(
         children: [
+          SizedBox(height: 10),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FriendsPage()),
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.person, size: 35.0),
+                Text(
+                  'Friends',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                ),
+                Padding(padding: EdgeInsets.only(right: 10)),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
@@ -137,7 +159,38 @@ class _HomePageState extends ConsumerState<HomePage> {
                         itemCount: chats.length,
                         itemBuilder: (context, index) {
                           final chatdata = chats[index];
-                          return ListTile(title: Text(chatdata.name));
+                          final lastMessageTime = DateFormat(
+                            'h:mm a',
+                          ).format(chatdata.lastMessageTime);
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatPage(),
+                                ),
+                              );
+                            },
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                radius: 26,
+                                backgroundImage: chatdata.photoUrl == null
+                                    ? null
+                                    : NetworkImage(chatdata.photoUrl!),
+                                child: chatdata.photoUrl == null
+                                    ? const Icon(Icons.person)
+                                    : null,
+                              ),
+                              title: Text(chatdata.name),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(lastMessageTime),
+                                  Text(chatdata.lastMessage),
+                                ],
+                              ),
+                            ),
+                          );
                         },
                       );
                     },

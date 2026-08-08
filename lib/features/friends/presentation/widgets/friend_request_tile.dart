@@ -1,6 +1,4 @@
-import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/friends/data/models/friend_request_model.dart';
-import 'package:chat_app/features/friends/data/models/relationship_model.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,4 +1,5 @@
 import 'package:chat_app/features/auth/data/models/user_model.dart';
+import 'package:chat_app/features/chat/data/models/chat_model.dart';
 import 'package:chat_app/features/friends/data/enum/friendship_enum.dart';
 import 'package:chat_app/features/friends/data/models/friend_request_model.dart';
 import 'package:chat_app/features/friends/data/models/relationship_model.dart';
@@ -18,6 +19,13 @@ class FirebaseFriendRepository implements FriendRepository {
        _auth = auth;
 
   String _generateRelationshipId(String uid1, String uid2) {
+    final List<String> ids = [uid1, uid2];
+    ids.sort();
+    final relationshipId = '${ids[0]}_${ids[1]}';
+    return relationshipId;
+  }
+
+  String _generateChatId(String uid1, String uid2) {
     final List<String> ids = [uid1, uid2];
     ids.sort();
     final relationshipId = '${ids[0]}_${ids[1]}';
@@ -131,6 +139,25 @@ class FirebaseFriendRepository implements FriendRepository {
           );
 
           transaction.set(relationshipDoc, updatedRelationship.toMap());
+
+          final chatId = _generateChatId(
+            currentUser.uid,
+            relationship.senderId,
+          );
+
+          final chatDoc = _firestore.collection('chats').doc(chatId);
+
+          final chat = ChatModel(
+            chatId: chatId,
+            participants: [currentUser.uid, relationship.senderId],
+            lastMessage: '',
+            lastMessageTime: currentTime,
+            lastMessageSenderId: '',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+
+          transaction.set(chatDoc, chat.toMap());
           return;
 
         case RelationshipStatus.accepted:
@@ -183,50 +210,36 @@ class FirebaseFriendRepository implements FriendRepository {
   }
 
   @override
-  Future<void> removeFriend(RelationshipModel relationship) async {
+  Future<void> removeFriend(UserModel friend) async {
     final currentUser = _auth.currentUser;
 
     if (currentUser == null) {
       throw StateError('No authenticated user.');
     }
 
-    final otherPersonId = relationship.participants.firstWhere(
-      (id) => id != currentUser.uid,
-    );
+    final relationshipId = _generateRelationshipId(currentUser.uid, friend.uid);
 
-    final relationshipId = _generateRelationshipId(
-      currentUser.uid,
-      otherPersonId,
-    );
+    final relationshipDoc = _firestore
+        .collection('relationships')
+        .doc(relationshipId);
 
     await _firestore.runTransaction((transaction) async {
-      final relationshipDoc = _firestore
-          .collection('relationships')
-          .doc(relationshipId);
-
       final snapshot = await transaction.get(relationshipDoc);
 
       if (!snapshot.exists) {
-        throw StateError('No relationship exist');
-      }
-      final current = RelationshipModel.fromMap(snapshot.data()!);
-
-      if (!current.participants.contains(currentUser.uid)) {
-        throw StateError('You are not part of this relationship.');
+        throw StateError('Relationship does not exist.');
       }
 
-      switch (current.status) {
-        case RelationshipStatus.pending:
-          return;
-        case RelationshipStatus.rejected:
-          return;
-        case RelationshipStatus.accepted:
-          transaction.delete(relationshipDoc);
+      final relationship = RelationshipModel.fromMap(snapshot.data()!);
+
+      if (relationship.status != RelationshipStatus.accepted) {
+        throw StateError('Users are not friends.');
       }
+
+      transaction.delete(relationshipDoc);
     });
   }
 
-  @override
   @override
   Stream<List<UserModel>> getFriends() {
     final currentUser = _auth.currentUser;

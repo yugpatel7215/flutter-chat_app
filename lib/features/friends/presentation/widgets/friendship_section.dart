@@ -60,14 +60,49 @@ class FriendshipSection extends ConsumerWidget {
   }
 }
 
-class _AddFriendButton extends StatelessWidget {
+class _AddFriendButton extends StatefulWidget {
   final VoidCallback onTap;
 
   const _AddFriendButton({required this.onTap});
 
   @override
+  State<_AddFriendButton> createState() => _AddFriendButtonState();
+}
+
+class _AddFriendButtonState extends State<_AddFriendButton> {
+  bool _isSending = false;
+
+  Future<void> _handleTap() async {
+    if (_isSending) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      widget.onTap();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Friend request sent')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ElevatedButton(onPressed: onTap, child: const Text('Add Friend'));
+    return ElevatedButton(
+      onPressed: _isSending ? null : _handleTap,
+      child: _isSending
+          ? const SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Text('Add Friend'),
+    );
   }
 }
 

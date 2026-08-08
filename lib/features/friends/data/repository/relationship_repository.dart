@@ -17,7 +17,7 @@ abstract class FriendRepository {
 
   // remove friend
 
-  Future<void> removeFriend(RelationshipModel relationship);
+  Future<void> removeFriend(UserModel friend);
 
   // Get relationship between current user and another user
   Stream<RelationshipModel?> getRelationship(String otherUserId);
