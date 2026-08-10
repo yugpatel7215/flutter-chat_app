@@ -162,6 +162,8 @@ class FirebaseChatRepository implements ChatRepository {
       text: text,
       type: MessageType.text,
       time: DateTime.now(),
+      isDeleted: false,
+      isEdited: false,
     );
 
     // Chat document reference
@@ -179,6 +181,7 @@ class FirebaseChatRepository implements ChatRepository {
         chatId: chatId,
         participants: ids,
         lastMessage: text,
+        lastMessageId: messageRef.id,
         lastMessageTime: messageModel.time,
         lastMessageSenderId: currentUserId,
         createdAt: messageModel.time,
@@ -201,6 +204,84 @@ class FirebaseChatRepository implements ChatRepository {
 
     // Commit everything atomically
     await batch.commit();
+  }
+
+  @override
+  @override
+  Future<void> editMessage(MessageModel message, String newText) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('No authenticated user.');
+    }
+
+    if (currentUser.uid != message.senderId) {
+      throw StateError('Only the sender can edit the message.');
+    }
+
+    final text = newText.trim();
+
+    if (text.isEmpty) {
+      throw StateError('Message cannot be empty.');
+    }
+
+    final messageDoc = _firestore
+        .collection('chats')
+        .doc(message.chatId)
+        .collection('messages')
+        .doc(message.messageId);
+
+    final chatDoc = _firestore.collection('chats').doc(message.chatId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Read the current chat state.
+      final chatSnapshot = await transaction.get(chatDoc);
+
+      if (!chatSnapshot.exists) {
+        throw StateError('Chat does not exist.');
+      }
+
+      final chat = ChatModel.fromMap(chatSnapshot.data()!);
+
+      // Create updated message.
+      final updatedMessage = message.copyWith(text: text, isEdited: true);
+
+      // Update message.
+      transaction.update(messageDoc, updatedMessage.toMap());
+
+      final chatData = chat.copyWith(
+        lastMessage: newText,
+        updatedAt: DateTime.now(),
+      );
+
+      if (chat.lastMessageId == message.messageId) {
+        transaction.update(chatDoc, chatData.toMap());
+      }
+    });
+  }
+
+  @override
+  @override
+  Future<void> deleteMessage(MessageModel message) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('No authenticated user.');
+    }
+
+    if (currentUser.uid != message.senderId) {
+      throw StateError('Only the sender can delete the message.');
+    }
+
+    final messageDoc = _firestore
+        .collection('chats')
+        .doc(message.chatId)
+        .collection('messages')
+        .doc(message.messageId);
+
+    final updatedMessage = message.copyWith(text: '', isDeleted: true);
+
+    await messageDoc.update(updatedMessage.toMap());
   }
 }
 

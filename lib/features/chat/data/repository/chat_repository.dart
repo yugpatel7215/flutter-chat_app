@@ -16,6 +16,10 @@ abstract class ChatRepository {
   // seach user
   Future<List<UserModel>> searchUsers(String query);
 
+  Future<void> editMessage(MessageModel message, String newText);
+
+  Future<void> deleteMessage(MessageModel message);
+
   //get user
 
   Future<void> getUserById(String uid);

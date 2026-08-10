@@ -6,10 +6,15 @@ class MessageList extends StatelessWidget {
   final List<MessageModel> messages;
   final String currentUserId;
 
+  final void Function(MessageModel message) onDelete;
+  final void Function(MessageModel message) onEdit;
+
   const MessageList({
     super.key,
     required this.messages,
     required this.currentUserId,
+    required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -20,7 +25,12 @@ class MessageList extends StatelessWidget {
       itemBuilder: (context, index) {
         final message = messages[index];
 
-        return MessageBubble(message: message, currentUserId: currentUserId);
+        return MessageBubble(
+          message: message,
+          currentUserId: currentUserId,
+          onDelete: () => onDelete(message),
+          onEdit: () => onEdit(message),
+        );
       },
     );
   }

@@ -28,6 +28,7 @@ class ChatTileModel {
       uid: uid ?? this.uid,
       name: name ?? this.name,
       lastMessage: lastMessage ?? this.lastMessage,
+      photoUrl: photoUrl ?? this.photoUrl,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
     );
   }

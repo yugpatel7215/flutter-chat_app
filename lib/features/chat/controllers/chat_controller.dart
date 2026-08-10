@@ -1,10 +1,11 @@
 import 'dart:async';
-
+import 'package:chat_app/features/chat/data/models/message_model.dart';
+import 'package:chat_app/features/chat/data/repository/chat_repository.dart';
 import 'package:chat_app/features/chat/data/repository/firebase_chat_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ChatController extends AsyncNotifier<void> {
-  late final _repo;
+  late final ChatRepository _repo;
 
   @override
   FutureOr<void> build() {
@@ -23,6 +24,22 @@ class ChatController extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await _repo.getUserById(uid);
+    });
+  }
+
+  Future<void> editMessage(MessageModel message, String newText) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.editMessage(message, newText);
+    });
+  }
+
+  Future<void> deleteMessage(MessageModel message) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.deleteMessage(message);
     });
   }
 }

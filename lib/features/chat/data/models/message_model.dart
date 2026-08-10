@@ -9,8 +9,10 @@ class MessageModel {
   final String text;
   final MessageType type;
   final DateTime time;
+  bool isEdited;
+  bool isDeleted;
 
-  const MessageModel({
+  MessageModel({
     required this.chatId,
     required this.senderId,
     required this.receiverId,
@@ -18,6 +20,8 @@ class MessageModel {
     required this.text,
     required this.type,
     required this.time,
+    required this.isEdited,
+    required this.isDeleted,
   });
 
   MessageModel copyWith({
@@ -28,6 +32,8 @@ class MessageModel {
     String? text,
     MessageType? type,
     DateTime? time,
+    bool? isEdited,
+    bool? isDeleted,
   }) {
     return MessageModel(
       chatId: chatId ?? this.chatId,
@@ -37,6 +43,8 @@ class MessageModel {
       text: text ?? this.text,
       type: type ?? this.type,
       time: time ?? this.time,
+      isEdited: isEdited ?? this.isEdited,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
@@ -49,6 +57,8 @@ class MessageModel {
       'text': text,
       'type': type.name,
       'time': Timestamp.fromDate(time),
+      'isEdited': isEdited,
+      'isDeleted': isDeleted,
     };
   }
 
@@ -63,6 +73,8 @@ class MessageModel {
         (enumValue) => enumValue.name == map['type'],
       ),
       time: (map['time'] as Timestamp).toDate(),
+      isDeleted: map['isDeleted'] as bool? ?? false,
+      isEdited: map['isEdited'] as bool? ?? false,
     );
   }
 }

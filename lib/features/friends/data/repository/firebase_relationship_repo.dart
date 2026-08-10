@@ -151,6 +151,7 @@ class FirebaseFriendRepository implements FriendRepository {
             chatId: chatId,
             participants: [currentUser.uid, relationship.senderId],
             lastMessage: '',
+            lastMessageId: chatDoc.id,
             lastMessageTime: currentTime,
             lastMessageSenderId: '',
             createdAt: DateTime.now(),
