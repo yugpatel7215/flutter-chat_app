@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/friends/data/enum/friendship_enum.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
@@ -13,46 +14,97 @@ class FriendshipSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final relationshipAsync = ref.watch(getRelationship(user.uid));
+
     final controller = ref.read(relationshipControllerProvider.notifier);
+
     final currentUser = FirebaseAuth.instance.currentUser;
 
+    if (currentUser == null) {
+      return const SizedBox.shrink();
+    }
+
     return relationshipAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(child: Text(error.toString())),
+      loading: () => const SizedBox(
+        height: 48,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+
+      error: (error, stackTrace) {
+        return Text(
+          'Could not load friendship status.',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        );
+      },
+
       data: (relationship) {
+        // No relationship exists.
         if (relationship == null) {
-          return _AddFriendButton(
-            onTap: () => controller.sendFriendRequest(user),
+          return _FriendshipActionButton(
+            label: 'Add Friend',
+            icon: Icons.person_add_outlined,
+            onTap: () {
+              return controller.sendFriendRequest(user);
+            },
+            successMessage: 'Friend request sent',
           );
         }
 
         switch (relationship.status) {
+          // A request exists.
           case RelationshipStatus.pending:
-            if (relationship.senderId == currentUser!.uid) {
-              return _CancelRequestButton(
-                onTap: () => controller.cancelFriendRequest(relationship),
+            // Current user sent the request.
+            if (relationship.senderId == currentUser.uid) {
+              return _FriendshipActionButton(
+                label: 'Cancel Request',
+                icon: Icons.person_remove_outlined,
+                outlined: true,
+                onTap: () {
+                  return controller.cancelFriendRequest(relationship);
+                },
+                successMessage: 'Friend request cancelled',
               );
             }
 
+            // Current user received the request.
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _AcceptFriendButton(
-                  onTap: () => controller.acceptFriendRequest(relationship),
+                _FriendshipActionButton(
+                  label: 'Accept',
+                  icon: Icons.check,
+                  onTap: () {
+                    return controller.acceptFriendRequest(relationship);
+                  },
+                  successMessage: 'Friend request accepted',
                 ),
+
                 const SizedBox(width: 8),
-                _RejectFriendButton(
-                  onTap: () => controller.rejectFriendRequest(relationship),
+
+                _FriendshipActionButton(
+                  label: 'Reject',
+                  icon: Icons.close,
+                  outlined: true,
+                  onTap: () {
+                    return controller.rejectFriendRequest(relationship);
+                  },
+                  successMessage: 'Friend request rejected',
                 ),
               ],
             );
 
+          // Already friends.
           case RelationshipStatus.accepted:
             return const _FriendsButton();
 
+          // Previous request was rejected.
           case RelationshipStatus.rejected:
-            return _AddFriendButton(
-              onTap: () => controller.sendFriendRequest(user),
+            return _FriendshipActionButton(
+              label: 'Add Friend',
+              icon: Icons.person_add_outlined,
+              onTap: () {
+                return controller.sendFriendRequest(user);
+              },
+              successMessage: 'Friend request sent',
             );
         }
       },
@@ -60,85 +112,89 @@ class FriendshipSection extends ConsumerWidget {
   }
 }
 
-class _AddFriendButton extends StatefulWidget {
-  final VoidCallback onTap;
+class _FriendshipActionButton extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final Future<void> Function() onTap;
+  final String successMessage;
+  final bool outlined;
 
-  const _AddFriendButton({required this.onTap});
+  const _FriendshipActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    required this.successMessage,
+    this.outlined = false,
+  });
 
   @override
-  State<_AddFriendButton> createState() => _AddFriendButtonState();
+  State<_FriendshipActionButton> createState() =>
+      _FriendshipActionButtonState();
 }
 
-class _AddFriendButtonState extends State<_AddFriendButton> {
-  bool _isSending = false;
+class _FriendshipActionButtonState extends State<_FriendshipActionButton> {
+  bool _isProcessing = false;
 
   Future<void> _handleTap() async {
-    if (_isSending) return;
+    if (_isProcessing) return;
 
-    setState(() => _isSending = true);
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
-      widget.onTap();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Friend request sent')));
-      }
+      await widget.onTap();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(widget.successMessage)));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) {
-        setState(() => _isSending = false);
+        setState(() {
+          _isProcessing = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: _isSending ? null : _handleTap,
-      child: _isSending
-          ? const SizedBox(
-              height: 16,
-              width: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Text('Add Friend'),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final child = _isProcessing
+        ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, size: 18),
+              const SizedBox(width: 8),
+              Text(widget.label),
+            ],
+          );
+
+    if (widget.outlined) {
+      return OutlinedButton(
+        onPressed: _isProcessing ? null : _handleTap,
+        child: child,
+      );
+    }
+
+    return FilledButton(
+      onPressed: _isProcessing ? null : _handleTap,
+      child: child,
     );
-  }
-}
-
-class _CancelRequestButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _CancelRequestButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      child: const Text('Cancel Request'),
-    );
-  }
-}
-
-class _AcceptFriendButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AcceptFriendButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(onPressed: onTap, child: const Text('Accept'));
-  }
-}
-
-class _RejectFriendButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _RejectFriendButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(onPressed: onTap, child: const Text('Reject'));
   }
 }
 
@@ -148,8 +204,8 @@ class _FriendsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
-      onPressed: () {},
-      icon: const Icon(Icons.check, size: 18),
+      onPressed: null,
+      icon: const Icon(Icons.people_alt_outlined),
       label: const Text('Friends'),
     );
   }

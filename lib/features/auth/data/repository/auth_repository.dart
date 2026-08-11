@@ -154,6 +154,10 @@ class AuthRepository {
       return data != null ? UserModel.fromMap(data) : null;
     });
   }
+
+  Future<void> forgotPassword(String email) async {
+    return _auth.sendPasswordResetEmail(email: email);
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

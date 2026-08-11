@@ -74,6 +74,14 @@ class AuthController extends AsyncNotifier<void> {
     });
   }
 
+  Future<void> forgotPassword(String email) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.forgotPassword(email);
+    });
+  }
+
   Stream<UserModel?> getUser(String userId) {
     return _repo.getUser(userId);
   }

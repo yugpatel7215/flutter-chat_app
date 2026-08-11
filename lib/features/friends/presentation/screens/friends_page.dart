@@ -1,3 +1,4 @@
+import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,57 +8,214 @@ class FriendsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(getFriends);
+    final friendsAsync = ref.watch(getFriends);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Friends'), centerTitle: true),
-      body: provider.when(
+      appBar: AppBar(
+        title: const Text(
+          'Friends',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: friendsAsync.when(
         data: (friends) {
           if (friends.isEmpty) {
-            return const Center(child: Text('No friends yet'));
+            return const _EmptyFriendsView();
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.only(top: 8, bottom: 16),
             itemCount: friends.length,
-            separatorBuilder: (context, index) =>
-                const Divider(height: 1, indent: 72),
+            separatorBuilder: (context, index) {
+              return Divider(
+                height: 1,
+                indent: 88,
+                endIndent: 16,
+                color: Theme.of(context).colorScheme.outlineVariant,
+              );
+            },
             itemBuilder: (context, index) {
-              final friendsData = friends[index];
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundImage: NetworkImage(friendsData.photoUrl),
-                ),
-                title: Text(
-                  friendsData.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  friendsData.username,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                trailing: IconButton(
-                  onPressed: () {
-                    _showRemoveFriendDialog(context, friendsData.name, () {
-                      ref
-                          .read(relationshipControllerProvider.notifier)
-                          .removeFriend(friendsData);
-                    });
-                  },
-                  icon: const Icon(Icons.more_vert),
-                ),
+              final UserModel friend = friends[index];
+
+              return _FriendTile(
+                friend: friend,
+                onRemove: () {
+                  _showRemoveFriendDialog(context, friend.name, () {
+                    ref
+                        .read(relationshipControllerProvider.notifier)
+                        .removeFriend(friend);
+                  });
+                },
               );
             },
           );
         },
-        error: (error, stack) =>
-            Center(child: Text('No friends\n${error.toString()}')),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) {
+          return _FriendsErrorView(
+            onRetry: () {
+              ref.invalidate(getFriends);
+            },
+          );
+        },
+        loading: () {
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    );
+  }
+}
+
+class _FriendTile extends StatelessWidget {
+  final UserModel friend;
+  final VoidCallback onRemove;
+
+  const _FriendTile({required this.friend, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final hasPhoto = friend.photoUrl.isNotEmpty;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: CircleAvatar(
+        radius: 28,
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        foregroundImage: hasPhoto ? NetworkImage(friend.photoUrl) : null,
+        child: !hasPhoto
+            ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
+            : null,
+      ),
+      title: Text(
+        friend.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          friend.username,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      trailing: PopupMenuButton<String>(
+        tooltip: 'Friend options',
+        icon: const Icon(Icons.more_vert),
+        onSelected: (value) {
+          if (value == 'remove') {
+            onRemove();
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: 'remove',
+            child: Row(
+              children: [
+                Icon(Icons.person_remove_outlined, color: colorScheme.error),
+                const SizedBox(width: 12),
+                const Text('Remove friend'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyFriendsView extends StatelessWidget {
+  const _EmptyFriendsView();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 72,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No friends yet',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Search for people and send them a friend request.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FriendsErrorView extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _FriendsErrorView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 56, color: colorScheme.error),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load friends',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Something went wrong while loading your friends.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -71,25 +229,31 @@ void _showRemoveFriendDialog(
   showDialog(
     context: context,
     builder: (context) {
+      final colorScheme = Theme.of(context).colorScheme;
+
       return AlertDialog(
         title: const Text('Remove Friend'),
         content: Text(
-          'Are you sure you want to remove $friendName from your friends list?',
+          'Are you sure you want to remove '
+          '$friendName from your friends list?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: colorScheme.error,
+              foregroundColor: colorScheme.onError,
+            ),
             onPressed: () {
               removeFriend();
               Navigator.pop(context);
             },
-            child: const Text(
-              'Remove Friend',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Remove'),
           ),
         ],
       );

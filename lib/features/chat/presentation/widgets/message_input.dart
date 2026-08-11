@@ -38,7 +38,6 @@ class _MessageInputState extends State<MessageInput> {
     final oldMessageId = oldWidget.editingMessage?.messageId;
     final newMessageId = widget.editingMessage?.messageId;
 
-    // Editing started or changed to another message.
     if (oldMessageId != newMessageId) {
       if (widget.editingMessage != null) {
         _messageController.text = widget.editingMessage!.text;
@@ -47,7 +46,6 @@ class _MessageInputState extends State<MessageInput> {
           offset: _messageController.text.length,
         );
       } else {
-        // Editing cancelled/completed.
         _messageController.clear();
       }
     }
@@ -67,7 +65,6 @@ class _MessageInputState extends State<MessageInput> {
     }
 
     if (widget.editingMessage != null) {
-      // Don't update Firestore if nothing actually changed.
       if (text == widget.editingMessage!.text.trim()) {
         widget.onCancelEdit();
         return;
@@ -83,44 +80,126 @@ class _MessageInputState extends State<MessageInput> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final isEditing = widget.editingMessage != null;
 
     return SafeArea(
+      top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _messageController,
-                textInputAction: TextInputAction.send,
-                minLines: 1,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: isEditing ? 'Edit message...' : 'Type a message...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  prefixIcon: isEditing
-                      ? IconButton(
-                          onPressed: widget.onCancelEdit,
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Cancel edit',
-                        )
-                      : null,
+            if (isEditing)
+              Padding(
+                padding: const EdgeInsets.only(left: 8, right: 8, bottom: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Editing message',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: widget.onCancelEdit,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                onSubmitted: (_) => _submit(),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _submit,
-              icon: Icon(isEditing ? Icons.check : Icons.send),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    textInputAction: TextInputAction.send,
+                    minLines: 1,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      hintText: isEditing
+                          ? 'Edit message...'
+                          : 'Type a message...',
+
+                      filled: true,
+
+                      fillColor: colorScheme.surfaceContainerHighest,
+
+                      prefixIcon: isEditing
+                          ? Icon(
+                              Icons.edit_outlined,
+                              size: 20,
+                              color: colorScheme.primary,
+                            )
+                          : null,
+
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: BorderSide.none,
+                      ),
+
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: BorderSide.none,
+                      ),
+
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
+                      ),
+
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                    ),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Material(
+                  color: colorScheme.primary,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    onTap: _submit,
+                    customBorder: const CircleBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(13),
+                      child: Icon(
+                        isEditing ? Icons.check : Icons.send_rounded,
+                        size: 21,
+                        color: colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

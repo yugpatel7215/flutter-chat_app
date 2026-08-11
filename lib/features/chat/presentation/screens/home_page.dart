@@ -1,15 +1,21 @@
 import 'dart:async';
+
+import 'package:chat_app/core/navigation/app_route.dart';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
-import 'package:chat_app/features/chat/providers/chat_provider.dart';
 import 'package:chat_app/features/chat/presentation/screens/chat_page.dart';
+import 'package:chat_app/features/chat/presentation/widgets/chat_tile.dart';
+import 'package:chat_app/features/chat/presentation/widgets/empty_chat_view.dart';
+import 'package:chat_app/features/chat/presentation/widgets/home_error_view.dart';
+import 'package:chat_app/features/chat/presentation/widgets/no_user_found.dart';
+import 'package:chat_app/features/chat/providers/chat_provider.dart';
 import 'package:chat_app/features/friends/presentation/screens/friend_request_page.dart';
 import 'package:chat_app/features/friends/presentation/screens/friends_page.dart';
 import 'package:chat_app/features/friends/presentation/user_profile_page.dart';
+import 'package:chat_app/features/friends/presentation/widgets/notification_bell.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -20,8 +26,11 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   bool _isSigningOut = false;
+
   final _searchController = TextEditingController();
+
   String _query = '';
+
   Timer? _debounce;
 
   @override
@@ -33,13 +42,22 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
+
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() => _query = value.trim());
+      if (!mounted) return;
+
+      setState(() {
+        _query = value.trim();
+      });
     });
   }
 
   Future<void> _signOut() async {
-    setState(() => _isSigningOut = true);
+    if (_isSigningOut) return;
+
+    setState(() {
+      _isSigningOut = true;
+    });
 
     await Future.wait([
       ref.read(authControllerProvider.notifier).signOut(),
@@ -47,80 +65,76 @@ class _HomePageState extends ConsumerState<HomePage> {
     ]);
 
     if (mounted) {
-      setState(() => _isSigningOut = false);
+      setState(() {
+        _isSigningOut = false;
+      });
     }
+  }
+
+  void _openFriends() {
+    Navigator.push(context, AppRoute.fade(const FriendsPage()));
+  }
+
+  void _openFriendRequests() {
+    Navigator.push(context, AppRoute.fade(const FriendRequestPage()));
+  }
+
+  void _openChat(chat) {
+    Navigator.push(context, AppRoute.fade(ChatPage(chat: chat)));
+  }
+
+  void _openProfile(user) {
+    Navigator.push(context, AppRoute.fade(UserProfilePage(userModel: user)));
   }
 
   @override
   Widget build(BuildContext context) {
     final chatsAsync = ref.watch(getChats);
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            IconButton(
-              onPressed: _isSigningOut ? null : _signOut,
-              icon: _isSigningOut
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.logout_outlined),
-            ),
-            const Expanded(child: Center(child: Text('Chats'))),
-            Consumer(
-              builder: (context, ref, child) {
-                final incomingRequestsAsync = ref.watch(getIncomingRequests);
-                final requestCount = incomingRequestsAsync.value?.length ?? 0;
-
-                return IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const FriendRequestPage(),
-                      ),
-                    );
-                  },
-                  icon: Badge(
-                    label: Text('$requestCount'),
-                    isLabelVisible: requestCount > 0,
-                    child: Icon(Icons.notifications, color: Colors.blue[400]),
-                  ),
-                );
-              },
-            ),
-          ],
+        title: const Text(
+          'Chats',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          Consumer(
+            builder: (context, ref, child) {
+              final incomingRequestsAsync = ref.watch(getIncomingRequests);
+
+              final requestCount = incomingRequestsAsync.value?.length ?? 0;
+
+              return NotificationBell(
+                count: requestCount,
+                onTap: _openFriendRequests,
+              );
+            },
+          ),
+
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: _isSigningOut ? null : _signOut,
+            icon: _isSigningOut
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.logout_outlined),
+          ),
+
+          const SizedBox(width: 8),
+        ],
       ),
 
       body: Column(
         children: [
-          SizedBox(height: 10),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => FriendsPage()),
-              );
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(Icons.person, size: 35.0),
-                Text(
-                  'Friends',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                Padding(padding: EdgeInsets.only(right: 10)),
-              ],
-            ),
-          ),
+          // Search section
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
               inputFormatters: [FilteringTextInputFormatter.deny(RegExp('@'))],
@@ -129,16 +143,34 @@ class _HomePageState extends ConsumerState<HomePage> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.close),
                         onPressed: () {
                           _searchController.clear();
                           _debounce?.cancel();
-                          setState(() => _query = '');
+
+                          setState(() {
+                            _query = '';
+                          });
                         },
                       )
                     : null,
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: colorScheme.primary,
+                    width: 1.5,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
@@ -148,100 +180,140 @@ class _HomePageState extends ConsumerState<HomePage> {
               },
             ),
           ),
+
+          // Friends shortcut
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _openFriends,
+                icon: const Icon(Icons.people_outline, size: 20),
+                label: const Text('Friends'),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // Main content
           Expanded(
             child: _query.isEmpty
-                ? chatsAsync.when(
-                    data: (chats) {
-                      if (chats.isEmpty) {
-                        return const Center(child: Text('No chats yet'));
-                      }
-                      return ListView.builder(
-                        itemCount: chats.length,
-                        itemBuilder: (context, index) {
-                          final chatdata = chats[index];
-                          final lastMessageTime = DateFormat(
-                            'h:mm a',
-                          ).format(chatdata.lastMessageTime);
-                          return InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ChatPage(chat: chatdata),
-                                ),
-                              );
-                            },
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                radius: 26,
-                                backgroundImage: chatdata.photoUrl == null
-                                    ? null
-                                    : NetworkImage(chatdata.photoUrl!),
-                                child: chatdata.photoUrl == null
-                                    ? const Icon(Icons.person)
-                                    : null,
-                              ),
-                              title: Text(chatdata.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(lastMessageTime),
-                                  Text(chatdata.lastMessage),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    error: (error, stack) =>
-                        Center(child: Text(error.toString())),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                  )
-                : Consumer(
-                    builder: (context, ref, _) {
-                      final searchAsync = ref.watch(searchProvider(_query));
-
-                      return searchAsync.when(
-                        data: (users) {
-                          if (users.isEmpty) {
-                            return const Center(child: Text('No users found'));
-                          }
-                          return ListView.builder(
-                            itemCount: users.length,
-                            itemBuilder: (context, index) {
-                              final user = users[index];
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          UserProfilePage(userModel: user),
-                                    ),
-                                  );
-                                },
-                                child: ListTile(
-                                  leading: const CircleAvatar(
-                                    child: Icon(Icons.person),
-                                  ),
-                                  title: Text(user.username),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        error: (error, stack) =>
-                            Center(child: Text(error.toString())),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                  ),
+                ? _buildChats(context, chatsAsync)
+                : _buildSearchResults(context),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChats(BuildContext context, AsyncValue chatsAsync) {
+    return chatsAsync.when(
+      data: (chats) {
+        if (chats.isEmpty) {
+          return const EmptyChatsView();
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.only(top: 4, bottom: 16),
+          itemCount: chats.length,
+          separatorBuilder: (context, index) {
+            return const Divider(height: 1, indent: 88, endIndent: 16);
+          },
+          itemBuilder: (context, index) {
+            final chat = chats[index];
+
+            return ChatTile(chat: chat, onTap: () => _openChat(chat));
+          },
+        );
+      },
+      error: (error, stack) {
+        return HomeErrorView(
+          message: 'Could not load your chats.',
+          onRetry: () {
+            ref.invalidate(getChats);
+          },
+        );
+      },
+      loading: () {
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final searchAsync = ref.watch(searchProvider(_query));
+
+        return searchAsync.when(
+          data: (users) {
+            if (users.isEmpty) {
+              return const NoUsersFoundView();
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.only(top: 4, bottom: 16),
+              itemCount: users.length,
+              separatorBuilder: (context, index) {
+                return const Divider(height: 1, indent: 88, endIndent: 16);
+              },
+              itemBuilder: (context, index) {
+                final user = users[index];
+
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  onTap: () => _openProfile(user),
+
+                  leading: CircleAvatar(
+                    radius: 28,
+                    foregroundImage: user.photoUrl.isNotEmpty
+                        ? NetworkImage(user.photoUrl)
+                        : null,
+                    child: user.photoUrl.isEmpty
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
+
+                  title: Text(
+                    user.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  subtitle: Text(
+                    user.username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+
+                  trailing: const Icon(Icons.chevron_right),
+                );
+              },
+            );
+          },
+          error: (error, stack) {
+            return HomeErrorView(
+              message: 'Could not search users.',
+              onRetry: () {
+                ref.invalidate(searchProvider(_query));
+              },
+            );
+          },
+          loading: () {
+            return const Center(child: CircularProgressIndicator());
+          },
+        );
+      },
     );
   }
 }

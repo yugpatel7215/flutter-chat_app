@@ -1,45 +1,44 @@
-import 'package:chat_app/core/navigation/app_route.dart';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
-import 'package:chat_app/features/auth/screens/forgot_password_page.dart';
-import 'package:chat_app/features/auth/screens/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class ForgotPasswordPage extends ConsumerStatefulWidget {
+  const ForgotPasswordPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _signIn() async {
+  Future<void> _sendResetEmail() async {
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter all fields')));
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email address.')),
+      );
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).signIn(email, password);
+    if (ref.read(authControllerProvider).isLoading) {
+      return;
+    }
+
+    await ref.read(authControllerProvider.notifier).forgotPassword(email);
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -49,7 +48,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (!context.mounted) return;
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Successfully signed in')),
+            const SnackBar(
+              content: Text('Password reset email sent. Check your inbox.'),
+            ),
           );
         },
         error: (error, stackTrace) {
@@ -65,11 +66,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Welcome Back',
+          'Forgot Password',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -79,22 +81,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.chat_bubble_rounded, size: 64),
+                  // Header icon
+                  Center(
+                    child: Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colorScheme.primaryContainer,
+                      ),
+                      child: Icon(
+                        Icons.lock_reset_rounded,
+                        size: 54,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 28),
 
+                  // Title
                   Text(
-                    'Sign in to continue',
+                    'Reset your password',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
+                  // Description
                   Text(
-                    'Enter your account details below',
+                    'Enter the email address associated with your account and we will send you a password reset link.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
@@ -103,76 +122,58 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   const SizedBox(height: 32),
 
+                  // Email
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      if (!authState.isLoading) {
+                        _sendResetEmail();
+                      }
+                    },
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'Enter your email',
                       prefixIcon: const Icon(Icons.email_outlined),
                       filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) {
-                      if (!authState.isLoading) {
-                        _signIn();
-                      }
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'Enter your password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      filled: true,
-                      border: OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
+                      ),
+
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 24),
 
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: authState.isLoading
-                          ? null
-                          : () {
-                              Navigator.push(
-                                context,
-                                AppRoute.fade(const ForgotPasswordPage()),
-                              );
-                            },
-                      child: const Text('Forgot password?'),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
+                  // Reset button
                   SizedBox(
                     height: 52,
                     child: FilledButton(
-                      onPressed: authState.isLoading ? null : _signIn,
+                      onPressed: authState.isLoading ? null : _sendResetEmail,
                       child: authState.isLoading
                           ? const SizedBox(
-                              height: 22,
                               width: 22,
+                              height: 22,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text(
-                              'Sign In',
+                              'Send Reset Link',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -181,27 +182,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account?",
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      TextButton(
-                        onPressed: authState.isLoading
-                            ? null
-                            : () {
-                                Navigator.push(
-                                  context,
-                                  AppRoute.fade(const RegisterPage()),
-                                );
-                              },
-                        child: const Text('Register'),
-                      ),
-                    ],
+                  // Back
+                  TextButton(
+                    onPressed: authState.isLoading
+                        ? null
+                        : () => Navigator.pop(context),
+                    child: const Text('Back to Sign In'),
                   ),
                 ],
               ),
