@@ -13,6 +13,10 @@ import 'package:chat_app/features/friends/presentation/screens/friends_page.dart
 import 'package:chat_app/features/friends/presentation/user_profile_page.dart';
 import 'package:chat_app/features/friends/presentation/widgets/notification_bell.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
+import 'package:chat_app/features/profile/presentation/widget/animated_profile_photo.dart';
+import 'package:chat_app/features/profile/providers/profile_provider.dart';
+import 'package:chat_app/features/profile/presentation/screens/my_profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,6 +91,16 @@ class _HomePageState extends ConsumerState<HomePage> {
     Navigator.push(context, AppRoute.fade(UserProfilePage(userModel: user)));
   }
 
+  void _openMyProfile() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      return;
+    }
+
+    Navigator.push(context, AppRoute.fade(MyProfilePage(uid: currentUser.uid)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatsAsync = ref.watch(getChats);
@@ -96,6 +110,62 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Consumer(
+          builder: (context, ref, child) {
+            final currentUser = FirebaseAuth.instance.currentUser;
+
+            if (currentUser == null) {
+              return const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircleAvatar(child: Icon(Icons.person)),
+              );
+            }
+
+            final profileAsync = ref.watch(getProfileData(currentUser.uid));
+
+            return profileAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircleAvatar(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+
+              error: (_, __) => Padding(
+                padding: const EdgeInsets.all(8),
+                child: AnimatedProfileAvatar(
+                  onTap: _openMyProfile,
+                  child: const CircleAvatar(
+                    radius: 20,
+                    child: Icon(Icons.person),
+                  ),
+                ),
+              ),
+
+              data: (user) {
+                final hasPhoto = user.photoUrl.trim().isNotEmpty;
+
+                return Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: AnimatedProfileAvatar(
+                    onTap: _openMyProfile,
+                    child: CircleAvatar(
+                      radius: 20,
+                      foregroundImage: hasPhoto
+                          ? NetworkImage(user.photoUrl)
+                          : null,
+                      child: hasPhoto ? null : const Icon(Icons.person),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
         title: const Text(
           'Chats',
           style: TextStyle(fontWeight: FontWeight.bold),

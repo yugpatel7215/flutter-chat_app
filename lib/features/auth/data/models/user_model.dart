@@ -44,4 +44,17 @@ class UserModel {
       lastSeen: map['lastSeen']?.toDate() ?? DateTime.now(),
     );
   }
+
+  UserModel copyWith({String? username, String? name, String? about}) {
+    return UserModel(
+      uid: uid,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      email: email,
+      photoUrl: photoUrl,
+      about: about ?? this.about,
+      isOnline: isOnline,
+      lastSeen: lastSeen,
+    );
+  }
 }

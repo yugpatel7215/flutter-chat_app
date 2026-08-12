@@ -4,7 +4,11 @@ class HomeErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const HomeErrorView({required this.message, required this.onRetry});
+  const HomeErrorView({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {

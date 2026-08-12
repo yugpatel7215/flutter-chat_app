@@ -167,8 +167,6 @@ class _FriendshipActionButtonState extends State<_FriendshipActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final child = _isProcessing
         ? const SizedBox(
             width: 18,

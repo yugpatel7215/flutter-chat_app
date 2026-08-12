@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class _NoUsersFoundView extends StatelessWidget {
-  const _NoUsersFoundView();
+class NoUsersFoundView extends StatelessWidget {
+  const NoUsersFoundView({super.key});
 
   @override
   Widget build(BuildContext context) {
