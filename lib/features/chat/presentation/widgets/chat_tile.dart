@@ -5,8 +5,14 @@ import 'package:intl/intl.dart';
 class ChatTile extends StatelessWidget {
   final ChatTileModel chat;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
-  const ChatTile({super.key, required this.chat, required this.onTap});
+  const ChatTile({
+    super.key,
+    required this.chat,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +21,7 @@ class ChatTile extends StatelessWidget {
     final lastMessageTime = DateFormat('h:mm a').format(chat.lastMessageTime);
 
     return ListTile(
+      onLongPress: onLongPress,
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
 

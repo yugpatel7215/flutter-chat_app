@@ -42,4 +42,12 @@ class ChatController extends AsyncNotifier<void> {
       await _repo.deleteMessage(message);
     });
   }
+
+  Future<void> deleteChat(String chatId) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.deleteChat(chatId);
+    });
+  }
 }

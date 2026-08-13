@@ -9,6 +9,7 @@ class ChatModel {
   final String lastMessageSenderId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<String> deletedFor;
 
   const ChatModel({
     required this.chatId,
@@ -19,6 +20,7 @@ class ChatModel {
     required this.lastMessageSenderId,
     required this.createdAt,
     required this.updatedAt,
+    required this.deletedFor,
   });
 
   ChatModel copyWith({
@@ -30,6 +32,7 @@ class ChatModel {
     String? lastMessageSenderId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? deletedFor,
   }) {
     return ChatModel(
       chatId: chatId ?? this.chatId,
@@ -40,6 +43,7 @@ class ChatModel {
       lastMessageSenderId: lastMessageSenderId ?? this.lastMessageSenderId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedFor: deletedFor ?? this.deletedFor,
     );
   }
 
@@ -53,6 +57,7 @@ class ChatModel {
       'lastMessageSenderId': lastMessageSenderId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'deletedFor': deletedFor,
     };
   }
 
@@ -66,6 +71,7 @@ class ChatModel {
       lastMessageSenderId: map['lastMessageSenderId'] ?? '',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      deletedFor: List<String>.from(map['deletedFor'] ?? []),
     );
   }
 }

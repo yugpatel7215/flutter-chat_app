@@ -156,6 +156,7 @@ class FirebaseFriendRepository implements FriendRepository {
             lastMessageSenderId: '',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
+            deletedFor: [],
           );
 
           transaction.set(chatDoc, chat.toMap());

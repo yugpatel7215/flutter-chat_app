@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:chat_app/core/navigation/app_route.dart';
 import 'package:chat_app/features/auth/controller/auth_controller.dart';
+import 'package:chat_app/features/chat/data/models/chattile_model.dart';
 import 'package:chat_app/features/chat/presentation/screens/chat_page.dart';
 import 'package:chat_app/features/chat/presentation/widgets/chat_tile.dart';
 import 'package:chat_app/features/chat/presentation/widgets/empty_chat_view.dart';
@@ -99,6 +100,79 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     Navigator.push(context, AppRoute.fade(MyProfilePage(uid: currentUser.uid)));
+  }
+
+  Future<void> _showDeleteConfirmation(ChatTileModel chat) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Chat?'),
+          content: const Text(
+            'This will remove the chat from your chat list. '
+            'Your messages will not be deleted.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true || !mounted) {
+      return;
+    }
+
+    await ref.read(chatControllerProvider.notifier).deleteChat(chat.chatId);
+  }
+
+  void _showChatActions(ChatTileModel chat) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit Display Name'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: edit display name
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Delete Chat'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmation(chat);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -293,7 +367,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           itemBuilder: (context, index) {
             final chat = chats[index];
 
-            return ChatTile(chat: chat, onTap: () => _openChat(chat));
+            return ChatTile(
+              chat: chat,
+              onTap: () => _openChat(chat),
+              onLongPress: () => _showChatActions(chat),
+            );
           },
         );
       },

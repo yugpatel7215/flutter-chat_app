@@ -21,6 +21,7 @@ class FirebaseChatRepository implements ChatRepository {
   @override
   Stream<List<ChatTileModel>> getChats() {
     final currentUser = _auth.currentUser;
+
     if (currentUser == null) {
       return Stream.value(<ChatTileModel>[]);
     }
@@ -31,11 +32,16 @@ class FirebaseChatRepository implements ChatRepository {
         .snapshots()
         .asyncMap((QuerySnapshot snapshot) async {
           final tiles = await Future.wait(
-            snapshot.docs.map((documents) async {
+            snapshot.docs.map((document) async {
               try {
                 final chatModel = ChatModel.fromMap(
-                  documents.data() as Map<String, dynamic>,
+                  document.data() as Map<String, dynamic>,
                 );
+
+                // Chat was deleted by the current user.
+                if (chatModel.deletedFor.contains(currentUser.uid)) {
+                  return null;
+                }
 
                 final otherPersonUid = chatModel.participants.firstWhere(
                   (uid) => uid != currentUser.uid,
@@ -108,15 +114,11 @@ class FirebaseChatRepository implements ChatRepository {
     final lowerQuery = query.toLowerCase();
     final searchTerm = '@$lowerQuery';
 
-    print('Searching for: "$searchTerm" to "$searchTerm\uf8ff"');
-
     final querySnapshot = await _firestore
         .collection('users')
         .where('username', isGreaterThanOrEqualTo: searchTerm)
         .where('username', isLessThanOrEqualTo: '$searchTerm\uf8ff')
         .get();
-
-    print('Docs found: ${querySnapshot.docs.length}');
 
     final users = querySnapshot.docs
         .map((doc) => UserModel.fromMap(doc.data()))
@@ -186,6 +188,7 @@ class FirebaseChatRepository implements ChatRepository {
         lastMessageSenderId: currentUserId,
         createdAt: messageModel.time,
         updatedAt: messageModel.time,
+        deletedFor: [],
       );
 
       batch.set(chatRef, chatModel.toMap());
@@ -196,6 +199,7 @@ class FirebaseChatRepository implements ChatRepository {
         'lastMessageTime': messageModel.time,
         'lastMessageSenderId': currentUserId,
         'updatedAt': messageModel.time,
+        'deletedFor': FieldValue.arrayRemove([currentUserId]),
       });
     }
 
@@ -282,6 +286,21 @@ class FirebaseChatRepository implements ChatRepository {
     final updatedMessage = message.copyWith(text: '', isDeleted: true);
 
     await messageDoc.update(updatedMessage.toMap());
+  }
+
+  @override
+  Future<void> deleteChat(String chatId) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    final chatRef = _firestore.collection('chats').doc(chatId);
+
+    await chatRef.update({
+      'deletedFor': FieldValue.arrayUnion([currentUser.uid]),
+    });
   }
 }
 

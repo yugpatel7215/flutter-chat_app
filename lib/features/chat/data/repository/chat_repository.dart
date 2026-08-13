@@ -23,4 +23,6 @@ abstract class ChatRepository {
   //get user
 
   Future<void> getUserById(String uid);
+
+  Future<void> deleteChat(String chatId);
 }
