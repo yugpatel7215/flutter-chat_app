@@ -150,7 +150,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 title: const Text('Edit Display Name'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: edit display name
+                  _showEditDisplayNameDialog(chat);
                 },
               ),
               ListTile(
@@ -170,6 +170,48 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showEditDisplayNameDialog(ChatTileModel chat) {
+    final controller = TextEditingController(text: chat.name);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Display Name'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Enter display name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final nickname = controller.text.trim();
+
+                if (nickname.isEmpty) {
+                  return;
+                }
+
+                ref
+                    .read(authControllerProvider.notifier)
+                    .setNicknames(chat.uid, nickname);
+
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         );
       },
     );

@@ -86,5 +86,21 @@ class AuthController extends AsyncNotifier<void> {
     return _repo.getUser(userId);
   }
 
+  Future<void> setNicknames(String otherUserId, String nickname) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.setNickname(otherUserId, nickname);
+    });
+  }
+
+  Future<void> removeNickname(String otherUserId) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      await _repo.removeNickname(otherUserId);
+    });
+  }
+
   User? get currentUser => _repo.currentUser;
 }

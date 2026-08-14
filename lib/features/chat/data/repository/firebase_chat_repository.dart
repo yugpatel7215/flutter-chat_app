@@ -6,6 +6,7 @@ import 'package:chat_app/features/chat/data/models/message_model.dart';
 import 'package:chat_app/features/chat/data/repository/chat_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FirebaseChatRepository implements ChatRepository {
@@ -26,55 +27,73 @@ class FirebaseChatRepository implements ChatRepository {
       return Stream.value(<ChatTileModel>[]);
     }
 
-    return _firestore
+    final chatsStream = _firestore
         .collection('chats')
         .where('participants', arrayContains: currentUser.uid)
-        .snapshots()
-        .asyncMap((QuerySnapshot snapshot) async {
-          final tiles = await Future.wait(
-            snapshot.docs.map((document) async {
-              try {
-                final chatModel = ChatModel.fromMap(
-                  document.data() as Map<String, dynamic>,
-                );
+        .snapshots();
 
-                // Chat was deleted by the current user.
-                if (chatModel.deletedFor.contains(currentUser.uid)) {
-                  return null;
-                }
+    final currentUserStream = _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .snapshots();
 
-                final otherPersonUid = chatModel.participants.firstWhere(
-                  (uid) => uid != currentUser.uid,
-                );
+    return chatsStream.asyncExpand((chatSnapshot) {
+      return currentUserStream.asyncMap((userSnapshot) async {
+        final userData = userSnapshot.data();
 
-                final userDoc = await _firestore
-                    .collection('users')
-                    .doc(otherPersonUid)
-                    .get();
+        if (!userSnapshot.exists || userData == null) {
+          return <ChatTileModel>[];
+        }
 
-                final otherPersonData = userDoc.data();
+        final currentUserModel = UserModel.fromMap(userData);
 
-                if (!userDoc.exists || otherPersonData == null) {
-                  return null;
-                }
+        final tiles = await Future.wait(
+          chatSnapshot.docs.map((document) async {
+            try {
+              final chatModel = ChatModel.fromMap(document.data());
 
-                final otherUser = UserModel.fromMap(otherPersonData);
-
-                return ChatTileModel(
-                  chatId: chatModel.chatId,
-                  uid: otherUser.uid,
-                  name: otherUser.name,
-                  lastMessage: chatModel.lastMessage,
-                  lastMessageTime: chatModel.lastMessageTime,
-                );
-              } catch (e) {
+              if (chatModel.deletedFor.contains(currentUser.uid)) {
                 return null;
               }
-            }),
-          );
 
-          return tiles.whereType<ChatTileModel>().toList();
-        });
+              final otherPersonUid = chatModel.participants.firstWhere(
+                (uid) => uid != currentUser.uid,
+              );
+
+              final userDoc = await _firestore
+                  .collection('users')
+                  .doc(otherPersonUid)
+                  .get();
+
+              final otherPersonData = userDoc.data();
+
+              if (!userDoc.exists || otherPersonData == null) {
+                return null;
+              }
+
+              final otherUser = UserModel.fromMap(otherPersonData);
+              final nickname = currentUserModel.nicknames[otherUser.uid];
+
+              debugPrint('OTHER USER UID: ${otherUser.uid}');
+              debugPrint('NICKNAME: $nickname');
+              debugPrint('ACTUAL NAME: ${otherUser.name}');
+
+              return ChatTileModel(
+                chatId: chatModel.chatId,
+                uid: otherUser.uid,
+                name: nickname ?? otherUser.name,
+                lastMessage: chatModel.lastMessage,
+                lastMessageTime: chatModel.lastMessageTime,
+              );
+            } catch (e) {
+              return null;
+            }
+          }),
+        );
+
+        return tiles.whereType<ChatTileModel>().toList();
+      });
+    });
   }
 
   @override

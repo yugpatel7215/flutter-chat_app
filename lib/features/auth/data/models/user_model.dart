@@ -7,6 +7,7 @@ class UserModel {
   final String about;
   final bool isOnline;
   final DateTime lastSeen;
+  final Map<String, String> nicknames;
 
   const UserModel({
     required this.uid,
@@ -17,6 +18,7 @@ class UserModel {
     required this.about,
     required this.isOnline,
     required this.lastSeen,
+    required this.nicknames,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +31,7 @@ class UserModel {
       'about': about,
       'onlineStatus': isOnline,
       'lastSeen': lastSeen,
+      'nicknames': nicknames,
     };
   }
 
@@ -42,10 +45,16 @@ class UserModel {
       about: map['about'] ?? '',
       isOnline: map['onlineStatus'] ?? false,
       lastSeen: map['lastSeen']?.toDate() ?? DateTime.now(),
+      nicknames: Map<String, String>.from(map['nicknames'] ?? {}),
     );
   }
 
-  UserModel copyWith({String? username, String? name, String? about}) {
+  UserModel copyWith({
+    String? username,
+    String? name,
+    String? about,
+    Map<String, String>? nicknames,
+  }) {
     return UserModel(
       uid: uid,
       name: name ?? this.name,
@@ -55,6 +64,7 @@ class UserModel {
       about: about ?? this.about,
       isOnline: isOnline,
       lastSeen: lastSeen,
+      nicknames: nicknames ?? this.nicknames,
     );
   }
 }

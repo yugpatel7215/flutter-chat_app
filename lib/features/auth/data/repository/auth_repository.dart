@@ -42,6 +42,7 @@ class AuthRepository {
         about: "Hey there! I'm using Chat App.",
         isOnline: true,
         lastSeen: DateTime.now(),
+        nicknames: {},
       );
 
       await Future.wait([
@@ -139,7 +140,6 @@ class AuthRepository {
   User? get currentUser => _auth.currentUser;
 
   Stream<User?> userChanges() => _auth.userChanges().map((user) {
-    print("Auth changed: $user");
     return user;
   });
 
@@ -157,6 +157,31 @@ class AuthRepository {
 
   Future<void> forgotPassword(String email) async {
     return _auth.sendPasswordResetEmail(email: email);
+  }
+
+  Future<void> setNickname(String otherUserId, String nickname) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('No authenticated user to verify.');
+    }
+
+    await _firestore.collection('users').doc(currentUser.uid).update({
+      'nicknames.$otherUserId': nickname,
+    });
+    debugPrint('Nickname Updated succefully $nickname ');
+  }
+
+  Future<void> removeNickname(String otherUserId) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('User is not authenticated.');
+    }
+
+    await _firestore.collection('users').doc(currentUser.uid).update({
+      'nicknames.$otherUserId': FieldValue.delete(),
+    });
   }
 }
 
