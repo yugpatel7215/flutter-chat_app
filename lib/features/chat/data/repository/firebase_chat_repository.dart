@@ -6,7 +6,6 @@ import 'package:chat_app/features/chat/data/models/message_model.dart';
 import 'package:chat_app/features/chat/data/repository/chat_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FirebaseChatRepository implements ChatRepository {
@@ -73,10 +72,6 @@ class FirebaseChatRepository implements ChatRepository {
 
               final otherUser = UserModel.fromMap(otherPersonData);
               final nickname = currentUserModel.nicknames[otherUser.uid];
-
-              debugPrint('OTHER USER UID: ${otherUser.uid}');
-              debugPrint('NICKNAME: $nickname');
-              debugPrint('ACTUAL NAME: ${otherUser.name}');
 
               return ChatTileModel(
                 chatId: chatModel.chatId,
