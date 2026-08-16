@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chat_app/features/auth/data/models/user_model.dart';
 import 'package:chat_app/features/chat/data/enum/message_enum.dart';
 import 'package:chat_app/features/chat/data/models/chat_model.dart';
@@ -19,6 +21,8 @@ class FirebaseChatRepository implements ChatRepository {
        _auth = auth;
 
   @override
+  @override
+  @override
   Stream<List<ChatTileModel>> getChats() {
     final currentUser = _auth.currentUser;
 
@@ -26,69 +30,115 @@ class FirebaseChatRepository implements ChatRepository {
       return Stream.value(<ChatTileModel>[]);
     }
 
-    final chatsStream = _firestore
+    final chatStream = _firestore
         .collection('chats')
         .where('participants', arrayContains: currentUser.uid)
         .snapshots();
 
-    final currentUserStream = _firestore
+    final userStream = _firestore
         .collection('users')
         .doc(currentUser.uid)
         .snapshots();
 
-    return chatsStream.asyncExpand((chatSnapshot) {
-      return currentUserStream.asyncMap((userSnapshot) async {
-        final userData = userSnapshot.data();
+    late StreamSubscription<QuerySnapshot<Map<String, dynamic>>>
+    chatSubscription;
 
-        if (!userSnapshot.exists || userData == null) {
-          return <ChatTileModel>[];
+    late StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>
+    userSubscription;
+
+    final controller = StreamController<List<ChatTileModel>>();
+
+    QuerySnapshot<Map<String, dynamic>>? latestChats;
+
+    UserModel? currentUserModel;
+
+    Future<void> emitChats() async {
+      if (latestChats == null || currentUserModel == null) {
+        return;
+      }
+
+      final tiles = await Future.wait(
+        latestChats!.docs.map((document) async {
+          final chatModel = ChatModel.fromMap(document.data());
+
+          // Hide chats deleted by the current user.
+          if (chatModel.deletedFor.contains(currentUser.uid)) {
+            return null;
+          }
+
+          final otherPersonUid = chatModel.participants.firstWhere(
+            (uid) => uid != currentUser.uid,
+          );
+
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(otherPersonUid)
+              .get();
+
+          final userData = userDoc.data();
+
+          if (!userDoc.exists || userData == null) {
+            return null;
+          }
+
+          final otherUser = UserModel.fromMap(userData);
+
+          // Use the private nickname if one exists.
+          final nickname = currentUserModel!.nicknames[otherPersonUid];
+
+          return ChatTileModel(
+            chatId: chatModel.chatId,
+            uid: otherUser.uid,
+            name: nickname ?? otherUser.name,
+            photoUrl: otherUser.photoUrl,
+            lastMessage: chatModel.lastMessage,
+            lastMessageTime: chatModel.lastMessageTime,
+          );
+        }),
+      );
+
+      if (!controller.isClosed) {
+        controller.add(tiles.whereType<ChatTileModel>().toList());
+      }
+    }
+
+    chatSubscription = chatStream.listen(
+      (snapshot) async {
+        latestChats = snapshot;
+        await emitChats();
+      },
+      onError: (error, stackTrace) {
+        if (!controller.isClosed) {
+          controller.addError(error, stackTrace);
+        }
+      },
+    );
+
+    userSubscription = userStream.listen(
+      (snapshot) async {
+        final data = snapshot.data();
+
+        if (!snapshot.exists || data == null) {
+          return;
         }
 
-        final currentUserModel = UserModel.fromMap(userData);
+        currentUserModel = UserModel.fromMap(data);
 
-        final tiles = await Future.wait(
-          chatSnapshot.docs.map((document) async {
-            try {
-              final chatModel = ChatModel.fromMap(document.data());
+        await emitChats();
+      },
+      onError: (error, stackTrace) {
+        if (!controller.isClosed) {
+          controller.addError(error, stackTrace);
+        }
+      },
+    );
 
-              if (chatModel.deletedFor.contains(currentUser.uid)) {
-                return null;
-              }
+    controller.onCancel = () async {
+      await chatSubscription.cancel();
+      await userSubscription.cancel();
+    };
 
-              final otherPersonUid = chatModel.participants.firstWhere(
-                (uid) => uid != currentUser.uid,
-              );
-
-              final userDoc = await _firestore
-                  .collection('users')
-                  .doc(otherPersonUid)
-                  .get();
-
-              final otherPersonData = userDoc.data();
-
-              if (!userDoc.exists || otherPersonData == null) {
-                return null;
-              }
-
-              final otherUser = UserModel.fromMap(otherPersonData);
-              final nickname = currentUserModel.nicknames[otherUser.uid];
-
-              return ChatTileModel(
-                chatId: chatModel.chatId,
-                uid: otherUser.uid,
-                name: nickname ?? otherUser.name,
-                lastMessage: chatModel.lastMessage,
-                lastMessageTime: chatModel.lastMessageTime,
-              );
-            } catch (e) {
-              return null;
-            }
-          }),
-        );
-
-        return tiles.whereType<ChatTileModel>().toList();
-      });
-    });
+    return controller.stream;
   }
 
   @override

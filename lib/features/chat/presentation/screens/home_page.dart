@@ -172,18 +172,20 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final nickname = controller.text.trim();
 
                 if (nickname.isEmpty) {
                   return;
                 }
 
-                ref
+                await ref
                     .read(authControllerProvider.notifier)
                     .setNicknames(chat.uid, nickname);
 
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: const Text('Save'),
             ),

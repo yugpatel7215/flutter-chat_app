@@ -1,5 +1,9 @@
+import 'package:chat_app/core/navigation/app_route.dart';
 import 'package:chat_app/features/auth/data/models/user_model.dart';
+import 'package:chat_app/features/chat/data/models/chattile_model.dart';
+import 'package:chat_app/features/chat/presentation/screens/chat_page.dart';
 import 'package:chat_app/features/friends/providers/relationship_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,6 +44,7 @@ class FriendsPage extends ConsumerWidget {
 
               return _FriendTile(
                 friend: friend,
+                onChat: () => _openChat(context, friend),
                 onRemove: () {
                   _showRemoveFriendDialog(context, friend.name, () {
                     ref
@@ -68,9 +73,14 @@ class FriendsPage extends ConsumerWidget {
 
 class _FriendTile extends StatelessWidget {
   final UserModel friend;
+  final VoidCallback onChat;
   final VoidCallback onRemove;
 
-  const _FriendTile({required this.friend, required this.onRemove});
+  const _FriendTile({
+    required this.friend,
+    required this.onChat,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +91,7 @@ class _FriendTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+
       leading: CircleAvatar(
         radius: 28,
         backgroundColor: colorScheme.surfaceContainerHighest,
@@ -89,6 +100,7 @@ class _FriendTile extends StatelessWidget {
             ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
             : null,
       ),
+
       title: Text(
         friend.name,
         maxLines: 1,
@@ -97,6 +109,7 @@ class _FriendTile extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 3),
         child: Text(
@@ -108,24 +121,41 @@ class _FriendTile extends StatelessWidget {
           ),
         ),
       ),
-      trailing: PopupMenuButton<String>(
-        tooltip: 'Friend options',
-        icon: const Icon(Icons.more_vert),
-        onSelected: (value) {
-          if (value == 'remove') {
-            onRemove();
-          }
-        },
-        itemBuilder: (context) => [
-          PopupMenuItem<String>(
-            value: 'remove',
-            child: Row(
-              children: [
-                Icon(Icons.person_remove_outlined, color: colorScheme.error),
-                const SizedBox(width: 12),
-                const Text('Remove friend'),
-              ],
-            ),
+
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Message',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: onChat,
+          ),
+
+          PopupMenuButton<String>(
+            tooltip: 'Friend options',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'remove') {
+                onRemove();
+              }
+            },
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem<String>(
+                  value: 'remove',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_remove_outlined,
+                        color: colorScheme.error,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Remove friend'),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),
@@ -259,4 +289,27 @@ void _showRemoveFriendDialog(
       );
     },
   );
+}
+
+void _openChat(BuildContext context, UserModel friend) {
+  final currentUser = FirebaseAuth.instance.currentUser;
+
+  if (currentUser == null) {
+    return;
+  }
+
+  final ids = [currentUser.uid, friend.uid]..sort();
+
+  final chatId = '${ids[0]}_${ids[1]}';
+
+  final chat = ChatTileModel(
+    chatId: chatId,
+    uid: friend.uid,
+    name: friend.name,
+    photoUrl: friend.photoUrl,
+    lastMessage: '',
+    lastMessageTime: DateTime.now(),
+  );
+
+  Navigator.push(context, AppRoute.fade(ChatPage(chat: chat)));
 }
