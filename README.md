@@ -1,35 +1,63 @@
 # Chat App
 
-A real-time one-to-one chat application built with Flutter, Dart, Firebase Authentication, Cloud Firestore, and Riverpod.
+A real-time one-to-one chat application built with **Flutter, Dart, Firebase Authentication, Cloud Firestore, and Riverpod**.
+
+The project follows a layered architecture so that the UI does not communicate directly with Firebase.
+
+## Screenshots
+
+| Login | Chat |
+|---|---|
+| <img src="assets/screenshots/login.png" width="300"> | <img src="assets/screenshots/chat_screen.png" width="300"> |
+
+| Search | Friend Requests |
+|---|---|
+| <img src="assets/screenshots/search.png" width="300"> | <img src="assets/screenshots/friend_request.png" width="300"> |
+
+| Friends | My Profile |
+|---|---|
+| <img src="assets/screenshots/friends_page.png" width="300"> | <img src="assets/screenshots/my_profile_page.png" width="300"> |
 
 ## Features
 
-* User registration and login
-* Email verification
-* Forgot password
-* User search
-* User profiles
-* Edit profile
-* Profile photo
-* Send friend requests
-* Cancel friend requests
-* Accept friend requests
-* Reject friend requests
-* Friends list
-* Real-time friendship updates
-* Real-time one-to-one chat
-* Persistent message history
-* Deterministic chat IDs
-* Real-time Firestore updates
+### Authentication
+- User registration and login
+- Email verification
+- Forgot password
+- Logout
+
+### Users & Profiles
+- Search users
+- View user profiles
+- Edit profile
+- Profile photo
+- Custom display names for chat contacts
+
+### Friendships
+- Send friend requests
+- Cancel friend requests
+- Accept friend requests
+- Reject friend requests
+- Friends list
+- Real-time relationship updates
+- In-app friend-request notification bell
+
+### Chat
+- Real-time one-to-one messaging
+- Persistent message history
+- Real-time chat-list updates
+- Deterministic chat IDs
+- Delete chat from the current user's chat list
+- Custom display names for individual chat contacts
 
 ## Tech Stack
 
-* Flutter
-* Dart
-* Firebase Authentication
-* Cloud Firestore
-* Riverpod
-* Material UI
+- Flutter
+- Dart
+- Firebase Authentication
+- Cloud Firestore
+- Riverpod
+- Material UI
 
 ## Architecture
 
@@ -61,7 +89,7 @@ Handles application actions and write operations.
 
 ### Repository
 
-Handles Firebase and Firestore operations.
+Handles Firebase Authentication and Firestore operations.
 
 The UI does not communicate directly with Firestore.
 
@@ -73,39 +101,39 @@ lib/
 ├── core/
 │
 ├── features/
-│
-├── auth/
-│   ├── controllers/
-│   ├── data/
-│   ├── providers/
-│   └── presentation/
-│
-├── profile/
-│   ├── controllers/
-│   ├── providers/
-│   ├── repository/
-│   └── presentation/
-│       ├── screens/
-│       └── widget/
-│
-├── friends/
-│   ├── controllers/
-│   ├── data/
-│   │   ├── enum/
-│   │   └── models/
-│   ├── providers/
-│   ├── repository/
-│   └── presentation/
-│       ├── pages/
-│       └── widgets/
-│
-├── chat/
-│   ├── controllers/
-│   ├── data/
-│   │   ├── models/
-│   │   └── repository/
-│   ├── providers/
-│   └── presentation/
+│   │
+│   ├── auth/
+│   │   ├── controller/
+│   │   ├── data/
+│   │   ├── providers/
+│   │   └── presentation/
+│   │
+│   ├── profile/
+│   │   ├── controllers/
+│   │   ├── providers/
+│   │   ├── repository/
+│   │   └── presentation/
+│   │       ├── screens/
+│   │       └── widget/
+│   │
+│   ├── friends/
+│   │   ├── controllers/
+│   │   ├── data/
+│   │   │   ├── enum/
+│   │   │   └── models/
+│   │   ├── providers/
+│   │   ├── repository/
+│   │   └── presentation/
+│   │       ├── screens/
+│   │       └── widgets/
+│   │
+│   └── chat/
+│       ├── controllers/
+│       ├── data/
+│       │   ├── models/
+│       │   └── repository/
+│       ├── providers/
+│       └── presentation/
 │
 └── main.dart
 ```
@@ -119,12 +147,17 @@ users/
 └── userId
     ├── uid
     ├── name
+    ├── username
     ├── email
     ├── photoUrl
     ├── about
     ├── onlineStatus
-    └── lastSeen
+    ├── lastSeen
+    └── nicknames
+        └── otherUserId: nickname
 ```
+
+`nicknames` stores private custom display names assigned by the current user to other users.
 
 ### Relationships
 
@@ -160,7 +193,8 @@ chats/
     ├── lastMessageSenderId
     ├── createdAt
     ├── updatedAt
-    └── unreadCount
+    ├── unreadCount
+    └── deletedFor
 ```
 
 ### Messages
@@ -177,11 +211,11 @@ chats/
             ├── type
             ├── delivered
             └── seenStatus
-```
+
 
 ## Friend Request Model
 
-Incoming friend requests use a combined model containing:
+Incoming friend requests use a combined model:
 
 ```text
 FriendRequestModel
@@ -189,13 +223,13 @@ FriendRequestModel
 └── RelationshipModel
 ```
 
-This allows the UI to access both the sender's information and relationship information without additional relationship lookups.
+This gives the UI both the request sender's information and the relationship data required for accept/reject actions.
 
 ## Real-Time Data
 
-Firestore streams are used for real-time application data.
+Firestore streams are used for real-time application data:
 
-```text
+text
 Firestore
  ↓
 Stream
@@ -209,17 +243,18 @@ Automatic Update
 
 Real-time functionality includes:
 
-* Chat list updates
-* New messages
-* Friend requests
-* Relationship changes
-* Friends list updates
+- Chat list updates
+- New messages
+- Friend requests
+- Relationship changes
+- Friends list updates
+- Custom chat display-name updates
 
 ## Application Flow
 
 ### Authentication
 
-```text
+text
 Login / Register
  ↓
 Firebase Authentication
@@ -233,7 +268,7 @@ Home
 
 ### Friend Requests
 
-```text
+text
 Search User
  ↓
 Open Profile
@@ -251,10 +286,10 @@ Friends List
 
 ### Chat
 
-```text
+text
 Select Friend
  ↓
-Generate Chat ID
+Generate Deterministic Chat ID
  ↓
 Open Chat
  ↓
@@ -269,56 +304,82 @@ Real-Time Stream
 Message Appears
 ```
 
+### Custom Display Name
+
+text
+Chat Tile
+ ↓
+Edit Display Name
+ ↓
+Save Nickname
+ ↓
+users/{currentUserId}/nicknames/{otherUserId}
+ ↓
+Current User Stream
+ ↓
+Chat List
+ ↓
+Updated Display Name
+```
+
 ## Current Status
 
-Basic chat application is complete and the implemented features have been tested.
+# Chat App V1 — Complete
 
-Implemented:
+Implemented and tested:
 
-* Authentication
-* User search
-* User profiles
-* Profile editing
-* Friend requests
-* Friends management
-* Real-time relationship updates
-* Chat list
-* One-to-one messaging
-* Real-time messages
-* Firestore persistence
+- Authentication
+- Email verification
+- Password recovery
+- User search
+- User profiles
+- Profile editing
+- Profile photos
+- Friend requests
+- Friends management
+- In-app friend-request notifications
+- Real-time relationship updates
+- Chat list
+- One-to-one messaging
+- Real-time messages
+- Persistent Firestore message history
+- Chat deletion
+- Custom chat display names
+- Riverpod state management
+- Layered UI → Provider → Controller → Repository architecture
 
 ## Future Improvements
 
-* In-app notifications
-* Push notifications
-* Online/offline presence
-* Typing indicators
-* Message read receipts
-* Message delivery status
-* Image and file messages
-* Message editing
-* Message deletion
-* Chat deletion
-* Unfriend
-* Block/unblock users
-* Pagination
-* Offline handling
-* Unit tests
-* Widget tests
-* Integration tests
-* Improved security rules
-* UI/UX improvements
+Possible V2 improvements:
+
+- Push notifications
+- Online/offline presence improvements
+- Typing indicators
+- Message read receipts
+- Message delivery status
+- Image and file messages
+- Message editing
+- Message deletion
+- Unfriend
+- Block/unblock users
+- Pagination
+- Offline handling
+- Unit tests
+- Widget tests
+- Integration tests
+- Improved Firestore security rules
+- UI/UX improvements
 
 ## Getting Started
 
 ### Prerequisites
 
-* Flutter SDK
-* Dart SDK
-* Android Studio or another Flutter IDE
-* Firebase project
-* Firebase Authentication
-* Cloud Firestore
+- Flutter SDK
+- Dart SDK
+- Android Studio or another Flutter IDE
+- Firebase project
+- Firebase Authentication
+- Cloud Firestore
 
 ### Installation
 
@@ -333,16 +394,16 @@ Configure Firebase for your target platform before running the application.
 
 ## Security
 
-Before deploying the application:
+Before deploying the application to production:
 
-* Configure Firestore security rules.
-* Restrict unauthorized database access.
-* Validate authentication and authorization.
-* Protect production credentials.
-* Review access rules for users, relationships, chats, and messages.
+- Configure Firestore security rules.
+- Restrict unauthorized database access.
+- Validate authentication and authorization.
+- Protect production credentials.
+- Review access rules for users, relationships, chats, and messages.
 
 ## Author
 
-YUGPATEL 
+**YUGPATEL**
 
 Built with Flutter, Dart, Firebase, and Riverpod.
